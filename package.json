@@ -1,0 +1,18 @@
+{
+  "name": "selfnetfs",
+  "version": "1.0.0",
+  "description": "selfnetfs",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node server/index.ts"
+  },
+  "author": "Keith <vorble@cochleoid.com>",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1",
+    "pg": "^8.5.1",
+    "ts-node": "^9.1.0",
+    "typescript": "^4.1.2"
+  }
+}
