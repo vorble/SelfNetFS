@@ -4,8 +4,9 @@
   "description": "selfnetfs",
   "main": "src/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node server/index.ts"
+    "build": "webpack",
+    "start": "ts-node server/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Keith <vorble@cochleoid.com>",
   "license": "MIT",
@@ -14,5 +15,10 @@
     "pg": "^8.5.1",
     "ts-node": "^9.1.0",
     "typescript": "^4.1.2"
+  },
+  "devDependencies": {
+    "ts-loader": "^8.0.11",
+    "webpack": "^5.10.0",
+    "webpack-cli": "^4.2.0"
   }
 }
