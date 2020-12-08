@@ -125,7 +125,7 @@ export interface SNFSWriteFile {
 }
 
 export interface SNFSReadFile {
-  data: string;
+  data: Uint8Array;
 }
 
 export interface SNFSUnlink {

@@ -10,7 +10,23 @@
   <script>
     'use strict';
 
-    const mem = new SNFSMemory();
+    let mem = new SNFSMemory();
+    let fs = null;
+
+    async function main() {
+      await mem.login({ name: 'guest', password: '' });
+      fs = await mem.fs();
+
+      const text = new TextEncoder().encode('test text.');
+
+      await fs.writefile('/hi', text, {});
+    }
+
+    main().then(() => {
+      console.log('Ready.');
+    }).catch(err => {
+      console.log(err);
+    });
   </script>
 </body>
 </html>

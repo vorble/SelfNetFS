@@ -8,6 +8,7 @@ import {
   SNFSFileSystemOptions,
   SNFSFileSystemLimits,
   SNFSMove,
+  SNFSNodeKind,
   SNFSReadDir,
   SNFSReadFile,
   SNFSStat,
@@ -44,16 +45,13 @@ function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
   };
 }
 
-function fileSystemOptionsToLimits(options: SNFSFileSystemOptions, fallback?: SNFSFileSystemLimits): SNFSFileSystemLimits {
+function fileSystemOptionsToLimits(options: SNFSFileSystemOptions, fallback: SNFSFileSystemLimits): SNFSFileSystemLimits {
   const limits = {
     max_files: options.max_files,
     max_storage: options.max_storage,
     max_depth: options.max_depth,
     max_path: options.max_path,
   };
-  if (fallback == null) {
-    fallback = LIMITS;
-  }
   if (typeof limits.max_files == 'undefined') {
     limits.max_files = fallback.max_files;
   } else if (limits.max_files < 0) {
@@ -133,10 +131,11 @@ export class SNFSMemory extends SNFS {
     if (fs == null) {
       throw new SNFSError('NO_FS');
     }
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, this._logged_in_user.union));
+    const writeable = true; // File system is writeable by virtue of being assigned the the user.
+    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, this._logged_in_user.union, writeable));
   }
 
-  async useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -173,10 +172,10 @@ export class SNFSMemory extends SNFS {
       union,
     };
     this._users.push(user);
-    return userRecordToUserInfo(user);
+    return Promise.resolve(userRecordToUserInfo(user));
   }
 
-  async usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -218,7 +217,7 @@ export class SNFSMemory extends SNFS {
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
-  async userdel(name: string): Promise<void> {
+  userdel(name: string): Promise<void> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -240,7 +239,7 @@ export class SNFSMemory extends SNFS {
     return Promise.resolve(this._users.map(userRecordToUserInfo));
   }
 
-  async fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
+  fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -251,12 +250,12 @@ export class SNFSMemory extends SNFS {
     }
     const limits = fileSystemOptionsToLimits(options, LIMITS);
     const fs = new SNFSFileSystemMemory(options.name, uuidgen(), limits);
-    // TODO: Check for collision?
+    // TODO: Check for collision? Shouldn't need to.
     this._fss.push(fs);
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  async fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
+  fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -272,7 +271,7 @@ export class SNFSMemory extends SNFS {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  async fsdel(fsno: string): Promise<void> {
+  fsdel(fsno: string): Promise<void> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -292,14 +291,14 @@ export class SNFSMemory extends SNFS {
     return Promise.resolve();
   }
 
-  async fslist(): Promise<SNFSFileSystemInfo[]> {
+  fslist(): Promise<SNFSFileSystemInfo[]> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
     return Promise.resolve(this._fss.map(fileSystemToInfo));
   }
 
-  async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
+  fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -307,73 +306,341 @@ export class SNFSMemory extends SNFS {
     if (fs == null) {
       throw new SNFSError('FS not found.');
     }
-    return fs;
+    const union = [];
+    for (const ufsno of options.union) {
+      const ufs = this._fss.find(fs => fs.fsno == ufsno);
+      if (ufs == null) {
+        throw new SNFSError('FS not found for union.');
+      }
+      union.push(ufs);
+    }
+    if (union.length == 0 && options.writeable) {
+      return Promise.resolve(fs);
+    }
+    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, union, options.writeable));
   }
 }
 
+function pathisdir(path: string) {
+  if (path.length == 0) {
+    return true; // It's /
+  }
+  return path[path.length - 1] == '/';
+}
+
+// File or dir
+function pathnormforfile(path: string) {
+  if (path.length == 0) {
+    throw new SNFSError('File must have a name.');
+  }
+  if (path[path.length - 1] == '/') {
+    throw new SNFSError('File path may not end with /');
+  }
+  const parts = path.split('/');
+  const bad = parts.find(x => x == '.' || x == '..');
+  if (bad != null) {
+    throw new SNFSError('. and .. are not valid in paths.');
+  }
+  return '/' + parts.filter(x => x != '').join('/');
+}
+
+function pathnormfordir(path: string) {
+  if (path.length == 0) {
+    return '/';
+  }
+  const parts = path.split('/');
+  const bad = parts.find(x => x == '.' || x == '..');
+  if (bad != null) {
+    throw new SNFSError('. and .. are not valid in paths.');
+  }
+  path = '/' + parts.filter(x => x != '').join('/');
+  if (path[path.length - 1] != '/')
+    path += '/';
+  return path;
+}
+
 export class SNFSFileSystemMemory extends SNFSFileSystem {
+  _files: Map<string, SNFSFileMemory>;
+
   constructor(name: string, fsno: string, limits: SNFSFileSystemLimits) {
     super(name, fsno, limits);
+
+    this._files = new Map<string, SNFSFileMemory>();
   }
 
-  async readdir(path: string): Promise<SNFSReadDir[]> {
-    throw new SNFSError('Not implemented.');
+  readdir(path: string): Promise<SNFSReadDir[]> {
+    path = pathnormfordir(path);
+    // Use the fact that path ends with a / to help with the search for files.
+    const result: SNFSReadDir[] = [];
+    for (const [p, f] of this._files.entries()) {
+      // e.g. path = '/some/place/' and p = '/some/place/to/call/home'
+      if (p.indexOf(path) == 0) {
+        const rest = p.slice(path.length);
+        const restparts = rest.split('/');
+        if (restparts.length == 0) {
+          // Since no file ends with a '/', rest will be non-empty and the split will be non-empty.
+          throw new SNFSError('Logical error.');
+        } else if (restparts.length == 1) {
+          // It's a file. There can be only one, so just add it without checking
+          // for a duplicate.
+          result.push({
+            name: restparts[0],
+            kind: SNFSNodeKind.File,
+            ino: f.ino,
+            ctime: f.ctime,
+            mtime: f.mtime,
+            size: f.data.length,
+            writeable: true,
+          });
+        } else {
+          // It's a directory. There may be more than one, so check for duplicates.
+          const existing = result.find(r => r.name == restparts[0] && r.kind == SNFSNodeKind.Directory);
+          if (existing == null) {
+            result.push({
+              name: restparts[0],
+              kind: SNFSNodeKind.Directory,
+              ino: null,
+              ctime: null,
+              mtime: null,
+              size: null,
+              writeable: null,
+            });
+          }
+        }
+      } // if (p.indexOf(path) == 0)
+    } // for (const [p, f] ...
+    result.sort((a, b) => {
+      if (a.name != b.name)
+        return a.name < b.name ? -1 : 1;
+      if (a.kind != b.kind)
+        return a.kind < b.kind ? -1 : 1;
+      return 0;
+    });
+    return Promise.resolve(result);
   }
 
-  async stat(path: string): Promise<SNFSStat> {
-    throw new SNFSError('Not implemented.');
+  stat(path: string): Promise<SNFSStat> {
+    path = pathnormforfile(path);
+    const f = this._files.get(path);
+    if (f == null) {
+      throw new SNFSError('File not found.');
+    }
+    return Promise.resolve({
+      name: path,
+      kind: SNFSNodeKind.File,
+      ino: f.ino,
+      ctime: f.ctime,
+      mtime: f.mtime,
+      size: f.data.length,
+      writeable: true, // Non-writeability is handled by SNFSFileSystemMemoryUnion
+    });
   }
 
-  async writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
-    throw new SNFSError('Not implemented.');
+  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+    path = pathnormforfile(path);
+    let f: SNFSFileMemory = this._files.get(path);
+    if (f == null || !options.truncate) {
+      f = {
+        name: path,
+        ino: uuidgen(),
+        ctime: new Date(),
+        mtime: new Date(),
+        data: data.slice(),
+      };
+      this._files.set(path, f);
+    } else {
+      f.data = data.slice();
+      f.mtime = new Date();
+    }
+    return Promise.resolve({
+      ino: f.ino,
+    });
   }
 
-  async readfile(path: string): Promise<SNFSReadFile> {
-    throw new SNFSError('Not implemented.');
+  readfile(path: string): Promise<SNFSReadFile> {
+    path = pathnormforfile(path);
+    const f = this._files.get(path);
+    if (f == null) {
+      throw new SNFSError('File not found.');
+    }
+    return Promise.resolve({
+      data: f.data.slice(),
+    });
   }
 
-  async unlink(path: string): Promise<SNFSUnlink> {
-    throw new SNFSError('Not implemented.');
+  unlink(path: string): Promise<SNFSUnlink> {
+    path = pathnormforfile(path);
+    if (!this._files.delete(path)) {
+      throw new SNFSError('File not found.');
+    }
+    return Promise.resolve({
+    });
   }
 
-  async move(path: string, newpath: string): Promise<SNFSMove> {
-    throw new SNFSError('Not implemented.');
+  move(path: string, newpath: string): Promise<SNFSMove> {
+    path = pathnormforfile(path);
+    newpath = pathnormforfile(newpath);
+    const f = this._files.get(path);
+    if (f == null) {
+      throw new SNFSError('File not found.');
+    }
+    this._files.delete(path);
+    // This deletes the file at newpath if there is one present.
+    this._files.set(newpath, f);
+    f.name = newpath;
+    return Promise.resolve({
+    });
   }
 }
 
 class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   _fs: SNFSFileSystemMemory;
   _union: SNFSFileSystemMemory[];
+  _writeable: boolean;
 
-  constructor(fs: SNFSFileSystemMemory, union: SNFSFileSystemMemory[]) {
+  constructor(fs: SNFSFileSystemMemory, union: SNFSFileSystemMemory[], writeable: boolean) {
     super(fs.name, fs.fsno, fs.limits);
 
     this._fs = fs;
     this._union = union.slice();
+    this._writeable = writeable;
   }
 
   async readdir(path: string): Promise<SNFSReadDir[]> {
-    throw new SNFSError('Not implemented.');
+    const result = await this._fs.readdir(path);
+    if (!this._writeable) {
+      for (const f of result) {
+        f.writeable = false;
+      }
+    }
+    for (const fs of this._union) {
+      const more = await fs.readdir(path);
+      for (const r of more) {
+        const existing = result.find(e => e.name == r.name && e.kind == r.kind);
+        if (existing == null) {
+          r.writeable = false;
+          result.push(r);
+        }
+      }
+    }
+    result.sort((a, b) => {
+      if (a.name != b.name)
+        return a.name < b.name ? -1 : 1;
+      if (a.kind != b.kind)
+        return a.kind < b.kind ? -1 : 1;
+      return 0;
+    });
+    return result;
   }
 
   async stat(path: string): Promise<SNFSStat> {
-    throw new SNFSError('Not implemented.');
+    const errors = [];
+    for (const fs of [this._fs, ...this._union]) {
+      try {
+        const result = await fs.stat(path);
+        // TODO: Not my favorite code, using errors as a counter.
+        if (errors.length > 0 || !this._writeable) {
+          result.writeable = false;
+        }
+        return result;
+      } catch(err) {
+        if (err instanceof SNFSError) {
+          errors.push(err);
+        } else {
+          throw err;
+        }
+      }
+    }
+    throw errors[0];
   }
 
-  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
-    throw new SNFSError('Not implemented.');
+  async writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+    if (!this._writeable) {
+      throw new SNFSError('Permission denied.');
+    }
+    return await this._fs.writefile(path, data, options);
   }
 
   async readfile(path: string): Promise<SNFSReadFile> {
-    throw new SNFSError('Not implemented.');
+    const errors = [];
+    for (const fs of [this._fs, ...this._union]) {
+      try {
+        return await fs.readfile(path);
+      } catch(err) {
+        if (err instanceof SNFSError) {
+          errors.push(err);
+        } else {
+          throw err;
+        }
+      }
+    }
+    throw errors[0]; // Maybe this isn't a great idea? It'll have the original stack trace.
   }
 
   async unlink(path: string): Promise<SNFSUnlink> {
-    throw new SNFSError('Not implemented.');
+    // It would be nice if this happened only if the file exists.
+    // Could do it by doing stat() first, but it's not time to
+    // make everything perfect yet.
+    if (!this._writeable) {
+      throw new SNFSError('Permission denied.');
+    }
+    // We'll defer the unlink error and throw if if none of the unioned fs's
+    // have the file. Otherwise we'll throw a permission denied.
+    let error = null;
+    try {
+      return await this._fs.unlink(path);
+    } catch (err) {
+      if (err instanceof SNFSError) {
+        error = err;
+      } else {
+        throw err;
+      }
+    }
+    for (const fs of this._union) {
+      try {
+        await fs.stat(path);
+        throw new SNFSError('Cannot unlink from unioned FS.');
+      } catch (err) {
+        if (err instanceof SNFSError) {
+          // Intentionally blank.
+        } else {
+          throw err;
+        }
+      }
+    }
+    throw error;
   }
 
   async move(path: string, newpath: string): Promise<SNFSMove> {
-    throw new SNFSError('Not implemented.');
+    // It would be nice if this happened only if the file exists.
+    // Could do it by doing stat() first, but it's not time to
+    // make everything perfect yet.
+    if (!this._writeable) {
+      throw new SNFSError('Permission denied.');
+    }
+    let error = null;
+    try {
+      return await this._fs.move(path, newpath);
+    } catch (err) {
+      if (err instanceof SNFSError) {
+        error = err;
+      } else {
+        throw err;
+      }
+    }
+    for (const fs of this._union) {
+      try {
+        await fs.stat(path);
+        throw new SNFSError('Cannot move from unioned FS.');
+      } catch (err) {
+        if (err instanceof SNFSError) {
+          // Intentionally blank.
+        } else {
+          throw err;
+        }
+      }
+    }
+    throw error;
   }
 }
 
@@ -387,4 +654,12 @@ interface UserRecord {
   password: string;
   fs: SNFSFileSystemMemory;
   union: SNFSFileSystemMemory[];
+}
+
+class SNFSFileMemory {
+  name: string;
+  ino: string;
+  ctime: Date;
+  mtime: Date;
+  data: Uint8Array;
 }
