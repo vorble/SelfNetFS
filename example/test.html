@@ -12,14 +12,60 @@
 
     let mem = new SNFSMemory();
     let fs = null;
+    let fs2 = null;
+    let fs3 = null;
+
+    function tenc(text) {
+      return new TextEncoder().encode(text);
+    }
+
+    function tdec(data) {
+      return new TextDecoder().decode(data);
+    }
 
     async function main() {
       await mem.login({ name: 'guest', password: '' });
       fs = await mem.fs();
 
-      const text = new TextEncoder().encode('test text.');
+      await fs.writefile('/hi', tenc('test text'), {});
+      await fs.writefile('/hi/there', tenc('this creates /hi'), {});
+      await fs.writefile('/hi/there/person', tenc('this creates /hi/there'), {});
+      {
+        const list = await fs.readdir('/');
+        if (list.length != 2) {
+          throw new Error('Should have two entries.');
+        }
+      }
+      {
+        const list = await fs.readdir('/hi');
+        if (list.length != 2) {
+          throw new Error('Should have two entries.');
+        }
+      }
 
-      await fs.writefile('/hi', text, {});
+      const fs2info = await mem.fsadd({
+        name: 'fs2',
+      });
+      fs2 = await mem.fsget(fs2info.fsno, {});
+
+      await fs2.writefile('/thanks', tenc('fs2'), {});
+      await fs2.writefile('/thanks/for', tenc('fs2'), {});
+      await fs2.writefile('/thanks/for/playing', tenc('fs2'), {});
+
+      const fs3info = await mem.fsadd({
+        name: 'fs3',
+      });
+      fs3 = await mem.fsget(fs3info.fsno, {});
+
+      await fs3.writefile('/thanks', tenc('fs3'), {});
+      await fs3.writefile('/thanks/for', tenc('fs3'), {});
+      await fs3.writefile('/thanks/for/watching', tenc('fs3'), {});
+
+      await mem.usermod('guest', {
+        union: [fs2.fsno, fs3.fsno],
+      });
+
+      fs = await mem.fs();
     }
 
     main().then(() => {

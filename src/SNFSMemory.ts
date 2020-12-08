@@ -214,6 +214,9 @@ export class SNFSMemory extends SNFS {
     }
     this._users = this._users.filter(u => u.name != name);
     this._users.push(new_user);
+    if (user == this._logged_in_user) {
+      this._logged_in_user = new_user;
+    }
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
@@ -299,6 +302,13 @@ export class SNFSMemory extends SNFS {
   }
 
   fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
+    options = { ...options };
+    if (typeof options.union == 'undefined') {
+      options.union = [];
+    }
+    if (typeof options.writeable == 'undefined') {
+      options.writeable = true;
+    }
     if (this._logged_in_user == null) {
       throw new SNFSError('NOT_LOGGED_IN');
     }
@@ -597,15 +607,19 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
       }
     }
     for (const fs of this._union) {
+      let dothrow = false;
       try {
         await fs.stat(path);
-        throw new SNFSError('Cannot unlink from unioned FS.');
+        dothrow = true;
       } catch (err) {
         if (err instanceof SNFSError) {
-          // Intentionally blank.
+          // File not found error expected.
         } else {
           throw err;
         }
+      }
+      if (dothrow) {
+        throw new SNFSError('Cannot unlink from unioned FS.');
       }
     }
     throw error;
@@ -629,15 +643,19 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
       }
     }
     for (const fs of this._union) {
+      let dothrow = false;
       try {
         await fs.stat(path);
-        throw new SNFSError('Cannot move from unioned FS.');
+        dothrow = true;
       } catch (err) {
         if (err instanceof SNFSError) {
           // Intentionally blank.
         } else {
           throw err;
         }
+      }
+      if (dothrow) {
+        throw new SNFSError('Cannot move from unioned FS.');
       }
     }
     throw error;
