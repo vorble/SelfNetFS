@@ -1,7 +1,10 @@
 export class SNFSError extends Error {}
 
 export abstract class SNFS {
-  abstract login(options: SNFSAuthCredentials): Promise<void>;
+  abstract login(options: SNFSAuthCredentials): Promise<SNFSSession>;
+}
+
+export abstract class SNFSSession {
   abstract logout(): Promise<void>;
   // After login(), if the user is associated with a file system, that file system
   // is returned by this function. For applications that only need access to a single
