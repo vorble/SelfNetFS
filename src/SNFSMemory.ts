@@ -27,6 +27,21 @@ const LIMITS = {
   max_path: 256,
 };
 
+export abstract class SNFSPasswordModule {
+  abstract hash(password: string): string;
+  abstract check(password: string, hash: string): boolean;
+}
+
+export class SNFSPasswordModuleNull extends SNFSPasswordModule {
+  hash(password: string): string {
+    return password;
+  }
+
+  check(password: string, hash: string): boolean {
+    return password === hash;
+  }
+}
+
 function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
   return {
     name: user.name,
@@ -93,25 +108,38 @@ function fileSystemToInfo(fs: SNFSFileSystemMemory): SNFSFileSystemInfo {
 
 export class SNFSMemory extends SNFS {
   _uuidgen: () => string;
+  _password_module: SNFSPasswordModule;
   _fss: SNFSFileSystemMemory[];
   _users: UserRecord[];
 
-  constructor(uuidgen: () => string) {
+  constructor(uuidgen: () => string, password_module: SNFSPasswordModule) {
     super();
 
     this._uuidgen = uuidgen;
+    this._password_module = password_module;
     this._fss = [new SNFSFileSystemMemory('default', this._uuidgen(), LIMITS, this._uuidgen)];
     this._users = [{
       name: 'guest',
-      password: '',
+      password: this._password_module.hash(''),
       fs: this._fss[0],
       union: [],
     }];
   }
 
   login(options: SNFSAuthCredentialsMemory): Promise<SNFSSession> {
-    const user = this._users.find(u => u.name == options.name && u.password == options.password);
+    let reject = false;
+    let user = null;
+    for (let i = 0; i < this._users.length; ++i) {
+      if (this._users[i].name == options.name) {
+        user = this._users[i];
+      }
+    }
     if (user == null) {
+      user = this._users[0];
+      reject = true;
+    }
+    const match = this._password_module.check(options.password, user.password);
+    if (!match || reject) {
       throw new SNFSError('AUTHORIZATION_DENIED');
     }
     const session = new SNFSSessionMemory(this, user);
@@ -179,7 +207,7 @@ export class SNFSSessionMemory extends SNFSSession {
     }
     const user = {
       name: options.name,
-      password: options.password,
+      password: this._snfs._password_module.hash(options.password),
       fs,
       union,
     };
@@ -204,7 +232,7 @@ export class SNFSSessionMemory extends SNFSSession {
       new_user.name = options.name;
     }
     if (typeof options.password !== 'undefined') {
-      new_user.password = options.password;
+      new_user.password = this._snfs._password_module.hash(options.password);
     }
     if (typeof options.fs !== 'undefined') {
       const fs = this._snfs._fss.find(f => f.fsno == options.fs);

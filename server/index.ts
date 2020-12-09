@@ -1,19 +1,21 @@
 import bodyParser = require('body-parser');
 import express = require('express');
+import fs = require('fs');
 import uuid = require('uuid');
-import { tokengen } from './token';
 
 import {
   SNFSMemory,
+  SNFSPasswordModuleNull,
 } from '../src/SNFSMemory';
 import {
   SNFSError,
   SNFSSession,
   SNFSFileSystem,
 } from '../src/SNFS';
+import { tokengen } from './token';
 
 const app = express();
-const snfs = new SNFSMemory(uuid.v4);
+const snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleNull());
 
 app.use(bodyParser.json());
 app.use((req, res, next) => {
