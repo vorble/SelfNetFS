@@ -10,11 +10,17 @@
   <script>
     'use strict';
 
+    let api = new SNFSHttp();
+    let ses = null;
+    let fs = null;
+
+    /*
     let mem = new SNFSMemory(uuidgen);
     let ses = null;
     let fs = null;
     let fs2 = null;
     let fs3 = null;
+    */
 
     function tenc(text) {
       return new TextEncoder().encode(text);
@@ -25,6 +31,12 @@
     }
 
     async function main() {
+      ses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'guest', password: '' });
+      fs = await ses.fs();
+
+      await fs.writefile('/path/to/happiness', tenc('is good friends'), {});
+
+      /*
       ses = await mem.login({ name: 'guest', password: '' });
       fs = await ses.fs();
 
@@ -67,12 +79,13 @@
       });
 
       fs = await ses.fs();
+      */
     }
 
     main().then(() => {
       console.log('Ready.');
     }).catch(err => {
-      console.log(err);
+      console.error(err);
     });
   </script>
 </body>

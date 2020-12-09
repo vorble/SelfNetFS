@@ -1,0 +1,140 @@
+import bodyParser = require('body-parser');
+import express = require('express');
+import uuid = require('uuid');
+import { tokengen } from './token';
+
+import {
+  SNFSMemory,
+} from '../src/SNFSMemory';
+import {
+  SNFSError,
+  SNFSSession,
+  SNFSFileSystem,
+} from '../src/SNFS';
+
+const app = express();
+const snfs = new SNFSMemory(uuid.v4);
+
+app.use(bodyParser.json());
+app.use((req, res, next) => {
+  // This server expects many places on the web to send it requests, tell the
+  // browser that it's okay.
+  res.header('Access-Control-Allow-Origin', '*');
+  // TODO: Review what are the right things to include in this?
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
+const handlers = new Map<string, (req, res) => Promise<any>>();
+const sessions = new Map<string, SNFSSession>();
+const sessionfss = new Map<string, Map<string, SNFSFileSystem>>();
+
+function getSession(token: string): SNFSSession {
+  const session = sessions.get(token);
+  if (session == null) {
+    throw new SNFSError('Not authorized.');
+  }
+  return session;
+}
+
+interface SessionAndFS {
+  session: SNFSSession;
+  fs: SNFSFileSystem;
+}
+function getSessionAndFS(token: string, fstoken: string): SessionAndFS {
+  const session = sessions.get(token);
+  if (session == null) {
+    throw new SNFSError('Not authorized.');
+  }
+  const fss = sessionfss.get(token);
+  if (fss == null) {
+    throw new Error('Missing fss.'); // Triggers 500 to browser, not SNFSError.
+  }
+  const fs = fss.get(fstoken);
+  if (fs == null) {
+    throw new SNFSError('Not authorized.');
+  }
+  return { session, fs };
+}
+
+handlers.set('login', async (req, res) => {
+  const { name, password } = req.body;
+  const session = await snfs.login({ name, password });
+  const token = tokengen();
+  sessions.set(token, session);
+  sessionfss.set(token, new Map<string, SNFSFileSystem>());
+  return Promise.resolve({ token });
+});
+
+handlers.set('logout', async (req, res) => {
+  const { token } = req.body;
+  const session = getSession(token); // Just for the throw if the session isn't authorized.
+  sessions.delete(token);
+  sessionfss.delete(token);
+  return Promise.resolve({});
+});
+
+handlers.set('fs', async (req, res) => {
+  const { token } = req.body;
+  const session = getSession(token);
+  const fs = await session.fs();
+  const fstoken = tokengen();
+  const fss = sessionfss.get(token);
+  fss.set(fstoken, fs);
+  const { name, fsno, limits } = fs;
+  return Promise.resolve({ fstoken, name, fsno, limits });
+});
+
+handlers.set('readdir', async (req, res) => {
+  const { token, fstoken, path } = req.body;
+  const { session, fs } = getSessionAndFS(token, fstoken);
+  return Promise.resolve(await fs.readdir(path));
+});
+
+handlers.set('writefile', async (req, res) => {
+  const { token, fstoken, path, data, options } = req.body;
+  const { session, fs } = getSessionAndFS(token, fstoken);
+  return Promise.resolve(await fs.writefile(path, Buffer.from(data, 'base64'), options));
+});
+
+handlers.set('readfile', async (req, res) => {
+  const { token, fstoken, path } = req.body;
+  const { session, fs } = getSessionAndFS(token, fstoken);
+  const result = await fs.readfile(path);
+  // TODO: Typescript isn't happy because Uint8Array toString() method doesn't take an argument.
+  const facade: any = result.data;
+  return Promise.resolve({
+    data: facade.toString('base64'),
+  });
+});
+
+app.options('/api', (req, res) => {
+  res.end();
+});
+app.post('/api', async (req, res) => {
+  if (typeof req.body != 'object') {
+    return res.status(400).send({ message: 'Invalid request: missing request body.' });
+  }
+  try {
+    const handler = handlers.get(req.body.op);
+    if (handler != null) {
+      const response = await handler(req, res);
+      return res.status(200).send(response);
+    }
+  } catch (err) {
+    if (err instanceof SNFSError) {
+      return res.status(400).send({ message: err.message });
+    } else {
+      console.error(err);
+      return res.status(500).send({ message: 'Internal server error.' });
+    }
+  }
+  res.status(400).send({ message: 'Invalid request: unexpected op.' });
+});
+
+var server = app.listen(3000, () => {
+   var host = server.address().address;
+   var port = server.address().port;
+
+   console.log("Listening on http://%s:%s", host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+});
