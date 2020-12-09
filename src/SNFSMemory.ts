@@ -492,13 +492,12 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     path = pathnormforfile(path);
     let f: SNFSFileMemory = this._files.get(path);
     if (f == null || !options.truncate) {
-      f = {
-        name: path,
-        ino: this._uuidgen(),
-        ctime: new Date(),
-        mtime: new Date(),
-        data: data.slice(),
-      };
+      f = new SNFSFileMemory();
+      f.name = path;
+      f.ino = this._uuidgen();
+      f.ctime = new Date();
+      f.mtime = new Date();
+      f.data = data.slice();
       this._files.set(path, f);
     } else {
       f.data = data.slice();
@@ -709,14 +708,14 @@ export interface SNFSAuthCredentialsMemory extends SNFSAuthCredentials {
   password: string;
 }
 
-interface UserRecord {
+export interface UserRecord {
   name: string;
   password: string;
   fs: SNFSFileSystemMemory;
   union: SNFSFileSystemMemory[];
 }
 
-class SNFSFileMemory {
+export class SNFSFileMemory {
   name: string;
   ino: string;
   ctime: Date;

@@ -1,2 +1,4 @@
 /dist
 /node_modules
+/database.json
+/database_clean.json

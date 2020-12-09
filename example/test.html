@@ -15,12 +15,10 @@
     let fs = null;
 
     let mem = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
-    /*
-    let ses = null;
-    let fs = null;
+    let memses = null;
+    let fs1 = null;
     let fs2 = null;
     let fs3 = null;
-    */
 
     function tenc(text) {
       return new TextEncoder().encode(text);
@@ -31,55 +29,49 @@
     }
 
     async function main() {
-      ses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'guest', password: '' });
+      ses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'keith', password: 'password' });
       fs = await ses.fs();
 
-      await fs.writefile('/path/to/happiness', tenc('is good friends'), {});
+      memses = await mem.login({ name: 'guest', password: '' });
+      fs1 = await memses.fs();
 
-      /*
-      ses = await mem.login({ name: 'guest', password: '' });
-      fs = await ses.fs();
-
-      await fs.writefile('/hi', tenc('test text'), {});
-      await fs.writefile('/hi/there', tenc('this creates /hi'), {});
-      await fs.writefile('/hi/there/person', tenc('this creates /hi/there'), {});
+      await fs1.writefile('/hi', tenc('test text'), {});
+      await fs1.writefile('/hi/there', tenc('this creates /hi'), {});
+      await fs1.writefile('/hi/there/person', tenc('this creates /hi/there'), {});
       {
-        const list = await fs.readdir('/');
+        const list = await fs1.readdir('/');
         if (list.length != 2) {
           throw new Error('Should have two entries.');
         }
       }
       {
-        const list = await fs.readdir('/hi');
+        const list = await fs1.readdir('/hi');
         if (list.length != 2) {
           throw new Error('Should have two entries.');
         }
       }
 
-      const fs2info = await ses.fsadd({
+      const fs2info = await memses.fsadd({
         name: 'fs2',
       });
-      fs2 = await ses.fsget(fs2info.fsno, {});
+      fs2 = await memses.fsget(fs2info.fsno, {});
 
       await fs2.writefile('/thanks', tenc('fs2'), {});
       await fs2.writefile('/thanks/for', tenc('fs2'), {});
       await fs2.writefile('/thanks/for/playing', tenc('fs2'), {});
 
-      const fs3info = await ses.fsadd({
+      const fs3info = await memses.fsadd({
         name: 'fs3',
       });
-      fs3 = await ses.fsget(fs3info.fsno, {});
+      fs3 = await memses.fsget(fs3info.fsno, {});
 
       await fs3.writefile('/thanks', tenc('fs3'), {});
       await fs3.writefile('/thanks/for', tenc('fs3'), {});
       await fs3.writefile('/thanks/for/watching', tenc('fs3'), {});
 
-      await ses.usermod('guest', {
+      await memses.usermod('guest', {
         union: [fs2.fsno, fs3.fsno],
       });
-
-      fs = await ses.fs();
-      */
     }
 
     main().then(() => {

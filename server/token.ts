@@ -1,5 +1,5 @@
-import uuid = require('uuid');
+import crypto = require('crypto');
 
-export function tokengen() {
-  return uuid.v4().replace(/-/g, '');
+export function tokengen(): string {
+  return crypto.randomBytes(32).toString('hex');
 }

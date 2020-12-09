@@ -5,17 +5,28 @@ import uuid = require('uuid');
 
 import {
   SNFSMemory,
-  SNFSPasswordModuleNull,
+  SNFSPasswordModule,
 } from '../src/SNFSMemory';
 import {
   SNFSError,
   SNFSSession,
   SNFSFileSystem,
 } from '../src/SNFS';
+import { SNFSPasswordModuleHash } from './SNFSPasswordModuleHash';
+import SNFSMemorySerializer from './SNFSMemorySerializer';
 import { tokengen } from './token';
 
 const app = express();
-const snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleNull());
+// TODO: Need to get rid of default credentials.
+let snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+
+try {
+  const data = fs.readFileSync('database.json').toString('utf-8');
+  SNFSMemorySerializer.parse(data, snfs);
+} catch(err) {
+  console.error(err);
+  snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+}
 
 app.use(bodyParser.json());
 app.use((req, res, next) => {
@@ -105,9 +116,9 @@ handlers.set('readfile', async (req, res) => {
   const result = await fs.readfile(path);
   // TODO: Typescript isn't happy because Uint8Array toString() method doesn't take an argument.
   const facade: any = result.data;
-  return Promise.resolve({
+  return {
     data: facade.toString('base64'),
-  });
+  };
 });
 
 app.options('/api', (req, res) => {
@@ -121,6 +132,7 @@ app.post('/api', async (req, res) => {
     const handler = handlers.get(req.body.op);
     if (handler != null) {
       const response = await handler(req, res);
+      fs.writeFileSync('database.json', SNFSMemorySerializer.stringify(snfs));
       return res.status(200).send(response);
     }
   } catch (err) {
