@@ -109,7 +109,7 @@ function dumpUserRecord(user: UserRecord): UserRecordDump {
   return {
     name: user.name,
     password: user.password,
-    fs: (user.fs || null).fsno || null,
+    fs: (user.fs || {}).fsno || null,
     union: user.union.map(ufs => ufs.fsno),
   };
 }
@@ -124,7 +124,7 @@ function loadUserRecord(user: any, snfs: SNFSMemory): UserRecord {
   return {
     name: user.name,
     password: user.password,
-    fs: lookupFS(user.fs),
+    fs: user.fs == null ? null : lookupFS(user.fs),
     union: user.union.map(lookupFS),
   };
 }
