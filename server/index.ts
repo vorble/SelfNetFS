@@ -98,6 +98,69 @@ handlers.set('fs', async (req, res) => {
   return Promise.resolve({ fstoken, name, fsno, limits });
 });
 
+handlers.set('useradd', async (req, res) => {
+  const { token, options } = req.body;
+  const session = getSession(token);
+  return Promise.resolve(await session.useradd(options));
+});
+
+handlers.set('usermod', async (req, res) => {
+  const { token, name, options } = req.body;
+  const session = getSession(token);
+  return Promise.resolve(await session.usermod(name, options));
+});
+
+handlers.set('userdel', async (req, res) => {
+  const { token, name } = req.body;
+  const session = getSession(token);
+  await session.userdel(name);
+  return Promise.resolve({});
+});
+
+handlers.set('userlist', async (req, res) => {
+  const { token } = req.body;
+  const session = getSession(token);
+  return Promise.resolve(await session.userlist());
+});
+
+handlers.set('fsadd', async (req, res) => {
+  const { token, options } = req.body;
+  const session = getSession(token);
+  return Promise.resolve(await session.fsadd(options));
+});
+
+handlers.set('fsmod', async (req, res) => {
+  const { token, fsno, options } = req.body;
+  const session = getSession(token);
+  return Promise.resolve(await session.fsmod(fsno, options));
+});
+
+handlers.set('fsdel', async (req, res) => {
+  const { token, fsno } = req.body;
+  const session = getSession(token);
+  await session.fsdel(fsno);
+  return Promise.resolve({});
+});
+
+handlers.set('fslist', async (req, res) => {
+  const { token } = req.body;
+  const session = getSession(token);
+  return Promise.resolve(await session.fslist());
+});
+
+handlers.set('fsget', async (req, res) => {
+  const { token, fsno, options } = req.body;
+  const session = getSession(token);
+  const fs = await session.fsget(fsno, options);
+  const fstoken = tokengen();
+  const fss = sessionfss.get(token);
+  fss.set(fstoken, fs);
+  {
+    const { name, fsno, limits } = fs;
+    return Promise.resolve({ fstoken, name, fsno, limits });
+  }
+});
+
 handlers.set('readdir', async (req, res) => {
   const { token, fstoken, path } = req.body;
   const { session, fs } = getSessionAndFS(token, fstoken);
@@ -119,6 +182,18 @@ handlers.set('readfile', async (req, res) => {
   return {
     data: facade.toString('base64'),
   };
+});
+
+handlers.set('unlink', async (req, res) => {
+  const { token, fstoken, path } = req.body;
+  const { session, fs } = getSessionAndFS(token, fstoken);
+  return Promise.resolve(await fs.unlink(path));
+});
+
+handlers.set('move', async (req, res) => {
+  const { token, fstoken, path, newpath } = req.body;
+  const { session, fs } = getSessionAndFS(token, fstoken);
+  return Promise.resolve(await fs.move(path, newpath));
 });
 
 app.options('/api', (req, res) => {

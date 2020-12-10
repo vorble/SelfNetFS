@@ -107,39 +107,85 @@ export class SNFSSessionHttp extends SNFSSession {
   }
 
   async useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'useradd',
+      token: this._token,
+      options,
+    });
+    return result;
   }
 
   async usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'usermod',
+      token: this._token,
+      name,
+      options,
+    });
+    return result;
   }
 
   async userdel(name: string): Promise<void> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'userdel',
+      token: this._token,
+      name,
+    });
+    return result;
   }
 
   async userlist(): Promise<SNFSUserInfo[]> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'userlist',
+      token: this._token,
+    });
+    return result;
   }
 
   async fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'fsadd',
+      token: this._token,
+      options,
+    });
+    return result;
   }
 
   async fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'fsmod',
+      token: this._token,
+      fsno,
+      options,
+    });
+    return result;
   }
 
   async fsdel(fsno: string): Promise<void> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'fsdel',
+      token: this._token,
+      fsno,
+    });
+    return result;
   }
 
   async fslist(): Promise<SNFSFileSystemInfo[]> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'fslist',
+      token: this._token,
+    });
+    return result;
   }
 
   async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'fsget',
+      token: this._token,
+      fsno,
+      options,
+    });
+    return new SNFSFileSystemHttp(this._snfs, this._api_root, this._token, result.fstoken, result.name, result.fsno, result.limits);
   }
 }
 
@@ -196,10 +242,23 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
   }
 
   async unlink(path: string): Promise<SNFSUnlink> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'unlink',
+      token: this._token,
+      fstoken: this._fstoken,
+      path,
+    });
+    return {};
   }
 
   async move(path: string, newpath: string): Promise<SNFSMove> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'move',
+      token: this._token,
+      fstoken: this._fstoken,
+      path,
+      newpath,
+    });
+    return {};
   }
 }
