@@ -303,6 +303,9 @@ export class SNFSSessionMemory extends SNFSSession {
       throw new SNFSError('NOT_LOGGED_IN');
     }
     const fs = this._snfs._fss.find(f => f.fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('File system not found.');
+    }
     if (typeof options.name == 'undefined') {
     } else if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
@@ -412,12 +415,14 @@ function pathnormfordir(path: string) {
 export class SNFSFileSystemMemory extends SNFSFileSystem {
   _uuidgen: () => string;
   _files: Map<string, SNFSFileMemory>;
+  _stored_bytes: number;
 
   constructor(name: string, fsno: string, limits: SNFSFileSystemLimits, uuidgen: () => string) {
     super(name, fsno, limits);
 
     this._uuidgen = uuidgen;
     this._files = new Map<string, SNFSFileMemory>();
+    this._stored_bytes = 0;
   }
 
   readdir(path: string): Promise<SNFSReadDir[]> {
@@ -490,8 +495,25 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
 
   writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
     path = pathnormforfile(path);
+    if (path.length > this.limits.max_path) {
+      throw new SNFSError('max_path exceeded.');
+    }
+    if (path.split('/').length - 1 > this.limits.max_depth) {
+      throw new SNFSError('max_depth exceeded.');
+    }
     let f: SNFSFileMemory = this._files.get(path);
     if (f == null || !options.truncate) {
+      let delta_bytes = 0;
+      if (f != null) {
+        delta_bytes -= f.data.length;
+      }
+      delta_bytes += data.length;
+      if (delta_bytes + this._stored_bytes > this.limits.max_storage) {
+        throw new SNFSError('max_storage exceeded.');
+      }
+      if (f == null && this._files.size + 1 > this.limits.max_files) {
+        throw new SNFSError('max_files exceeded.');
+      }
       f = new SNFSFileMemory();
       f.name = path;
       f.ino = this._uuidgen();
@@ -499,9 +521,15 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       f.mtime = new Date();
       f.data = data.slice();
       this._files.set(path, f);
+      this._stored_bytes += delta_bytes;
     } else {
+      let delta_bytes = data.length - f.data.length;
+      if (delta_bytes + this._stored_bytes > this.limits.max_storage) {
+        throw new SNFSError('max_storage exceeded.');
+      }
       f.data = data.slice();
       f.mtime = new Date();
+      this._stored_bytes += delta_bytes;
     }
     return Promise.resolve({
       ino: f.ino,
@@ -521,9 +549,12 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
 
   unlink(path: string): Promise<SNFSUnlink> {
     path = pathnormforfile(path);
-    if (!this._files.delete(path)) {
+    const f = this._files.get(path);
+    if (f == null) {
       throw new SNFSError('File not found.');
     }
+    this._files.delete(path);
+    this._stored_bytes -= f.data.length;
     return Promise.resolve({
     });
   }
@@ -531,6 +562,12 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
   move(path: string, newpath: string): Promise<SNFSMove> {
     path = pathnormforfile(path);
     newpath = pathnormforfile(newpath);
+    if (newpath.length > this.limits.max_path) {
+      throw new SNFSError('max_path exceeded.');
+    }
+    if (newpath.split('/').length - 1 > this.limits.max_depth) {
+      throw new SNFSError('max_depth exceeded.');
+    }
     const f = this._files.get(path);
     if (f == null) {
       throw new SNFSError('File not found.');

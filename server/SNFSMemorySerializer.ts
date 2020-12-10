@@ -66,6 +66,7 @@ function loadSNFSFileSystemMemory(fs: any, snfs: SNFSMemory): SNFSFileSystemMemo
   for (const file of fs.files) {
     const f = loadSNFSFileMemory(file);
     result._files.set(f.name, f);
+    result._stored_bytes += f.data.length;
   }
   return result;
 }
