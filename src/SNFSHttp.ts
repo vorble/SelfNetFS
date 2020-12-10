@@ -215,7 +215,15 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
   }
 
   async stat(path: string): Promise<SNFSStat> {
-    throw new SNFSError('Not implemented.');
+    const result = await apirequest(this._api_root, {
+      op: 'stat',
+      token: this._token,
+      fstoken: this._fstoken,
+      path,
+    });
+    result.mtime = new Date(result.mtime);
+    result.ctime = new Date(result.ctime);
+    return result;
   }
 
   async writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {

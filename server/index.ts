@@ -167,6 +167,17 @@ handlers.set('readdir', async (req, res) => {
   return Promise.resolve(await fs.readdir(path));
 });
 
+handlers.set('stat', async (req, res) => {
+  const { token, fstoken, path } = req.body;
+  const { session, fs } = getSessionAndFS(token, fstoken);
+  const result = await fs.stat(path);
+  return Promise.resolve({
+    ...result,
+    ctime: result.ctime.getTime(),
+    mtime: result.mtime.getTime(),
+  });
+});
+
 handlers.set('writefile', async (req, res) => {
   const { token, fstoken, path, data, options } = req.body;
   const { session, fs } = getSessionAndFS(token, fstoken);
