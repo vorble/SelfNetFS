@@ -37,6 +37,7 @@
 
       gses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'guest', password: 'password' });
 
+      mem.bootstrap('guest', '');
       memses = await mem.login({ name: 'guest', password: '' });
       fs1 = await memses.fs();
 

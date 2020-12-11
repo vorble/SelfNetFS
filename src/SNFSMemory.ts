@@ -150,7 +150,7 @@ export class SNFSMemory extends SNFS {
       }
     }
     if (user == null) {
-      user = this._users[0];
+      user = this._users[0] || { password: '' };
       reject = true;
     }
     const match = this._password_module.check(options.password, user.password);
