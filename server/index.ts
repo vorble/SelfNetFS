@@ -17,15 +17,35 @@ import SNFSMemorySerializer from './SNFSMemorySerializer';
 import { tokengen } from './token';
 
 const app = express();
-// TODO: Need to get rid of default credentials.
 let snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
 
 try {
   const data = fs.readFileSync('database.json').toString('utf-8');
   SNFSMemorySerializer.parse(data, snfs);
 } catch(err) {
-  console.error(err);
+  if (err.code != 'ENOENT') {
+    console.error(err);
+  }
   snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+}
+
+if (process.argv.slice(2).indexOf('--init') >= 0) {
+  const argv = process.argv.slice(2);
+  const [init, name, password] = argv;
+  if (!name) {
+    console.log('Please specify the user\'s name.');
+    process.exit(1);
+  }
+  if (!password) {
+    console.log('Please specify the user\'s password.');
+    process.exit(1);
+  }
+  // If there's already stuff in the database, this will cause an error.
+  snfs.bootstrap(name, password);
+  fs.writeFileSync('database.json', SNFSMemorySerializer.stringify(snfs));
+  console.log('database.json has been generated with the provided credentials.');
+  console.log('hint: unset HISTFILE');
+  process.exit(0);
 }
 
 app.use(bodyParser.json());

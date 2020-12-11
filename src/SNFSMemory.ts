@@ -118,14 +118,27 @@ export class SNFSMemory extends SNFS {
 
     this._uuidgen = uuidgen;
     this._password_module = password_module;
-    this._fss = [new SNFSFileSystemMemory('default', this._uuidgen(), LIMITS, this._uuidgen)];
-    this._users = [{
-      name: 'guest', // TODO: Need to get rid of the default login and make a way to bootstrap a new memory database.
+    this._fss = [];
+    this._users = [];
+  }
+
+  // just for in-memory implementation.
+  // Not necessary to return Promise<void>, so it doesn't
+  // to let the server code be simpler for now.
+  bootstrap(name: string, password: string) {
+    if (this._fss.length != 0 || this._users.length != 0) {
+      throw new SNFSError('Too late to bootstrap.');
+    }
+    const fs = new SNFSFileSystemMemory('default', this._uuidgen(), LIMITS, this._uuidgen);
+    const user = {
+      name: name,
       admin: true,
       password: this._password_module.hash(''),
-      fs: this._fss[0],
+      fs: fs,
       union: [],
-    }];
+    };
+    this._fss.push(fs);
+    this._users.push(user);
   }
 
   login(options: SNFSAuthCredentialsMemory): Promise<SNFSSession> {
