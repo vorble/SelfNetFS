@@ -32,10 +32,17 @@
     }
 
     async function main() {
-      ses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'keith', password: 'password' });
+      try {
+        ses = await api.resume('https://selfnetfs-api.home.arpa/api');
+        console.log('Successfully resumed session.');
+      } catch (err) {
+        console.log('Couldn\'t resume, logging in again.');
+        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/api', name: 'keith', password: 'password' });
+      }
       fs = await ses.fs();
+      /*
 
-      gses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'guest', password: 'password' });
+      gses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/api', name: 'guest', password: 'password' });
 
       mem.bootstrap('guest', '');
       memses = await mem.login({ name: 'guest', password: '' });
@@ -78,6 +85,7 @@
       await memses.usermod('guest', {
         union: [fs2.fsno, fs3.fsno],
       });
+      */
     }
 
     main().then(() => {
