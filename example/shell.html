@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SelfNetFS Shell</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .prompt {
+      font-family: monospace;
+      font-size: 12pt;
+      white-space: pre;
+    }
+    .readline {
+      font-family: monospace;
+      font-size: 12pt;
+      border: none;
+      flex-grow: 1;
+    }
+    .readlinewrapper {
+      display: flex;
+      flex-direction: row;
+    }
+    .term {
+      font-family: monospace;
+      font-size: 12pt;
+      white-space: pre;
+    }
+  </style>
+  <script src="./selfnetfs.js"></script>
+</head>
+<body>
+  <div id="term" class="term"></div>
+  <div class="readlinewrapper">
+    <div id="prompt" class="prompt">$ </div>
+    <input type="text" class="readline" id="readline">
+  </div>
+  <script>
+    'use strict';
+
+    let $term = document.getElementById('term');
+    let $prompt = document.getElementById('prompt');
+    let $readline = document.getElementById('readline');
+    let api = new SNFSHttp();
+    let ses = null;
+    let fs = null;
+
+    function tenc(text) {
+      return new TextEncoder().encode(text);
+    }
+
+    function tdec(data) {
+      return new TextDecoder().decode(data);
+    }
+
+    function repr(o) {
+      if (typeof o === 'object') {
+        return JSON.stringify(o);
+      }
+      return o.toString();
+    }
+
+    const commands = new Map(); // [string, async (...args) => {}]
+    commands.set('connect', async (...args) => {
+      if (args.length != 3) {
+        shell.log('connect: usage: connect api_root user password');
+        return;
+      }
+      const [api_root, name, password] = args;
+      try {
+        ses = await api.login({ api_root, name, password });
+        localStorage.setItem('snfs_api_root', api_root);
+      } catch (err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    const shell = {
+      log: (...args) => {
+        const text = document.createTextNode(args.map(repr).join(' ') + '\n');
+        $term.appendChild(text);
+        window.scrollTo(0, document.body.scrollHeight);
+      },
+      exec: (command) => {
+        // TODO: Probably will need to handle quotes and significant whitespaces.
+        const parts = command.split(/\s+/g);
+        if (parts.length == 0 || parts[0].length == 0) {
+          return;
+        }
+        const executable = commands.get(parts[0]);
+        if (executable == null) {
+          shell.log('shell: command not found: ' + parts[0]);
+          return;
+        }
+        executable(...parts.slice(1));
+      },
+    };
+
+    $readline.onkeydown = (e) => {
+      // console.log(e);
+      if (e.key == 'Enter') {
+        const command = e.target.value;
+        shell.log($prompt.innerText + command);
+        e.target.value = '';
+        shell.exec(command);
+      } else if (e.key == 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    function handleErr(err) {
+      if (err instanceof SNFSError) {
+        shell.log(`ERROR: ${ err.message }`);
+      } else {
+        shell.log('Internal error. Please check the developer console.');
+        throw err;
+      }
+    }
+
+    async function main() {
+      shell.log('SelfNetFS Shell');
+      const api_root = localStorage.getItem('snfs_api_root');
+      if (api_root != null) {
+        shell.log(`Resuming session at ${api_root}...`);
+        try {
+          ses = await api.resume(api_root);
+          shell.log('Success.');
+        } catch(err) {
+          handleErr(err);
+        }
+      }
+    }
+
+    main().then(() => {
+      console.log('Ready.');
+      // Text doesn't always clear when realoading the page.
+      $readline.value = '';
+      $readline.focus();
+    }).catch(err => {
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
