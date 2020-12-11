@@ -14,6 +14,9 @@
     let ses = null;
     let fs = null;
 
+    let gses = null;
+    let gfs = null;
+
     let mem = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
     let memses = null;
     let fs1 = null;
@@ -31,6 +34,8 @@
     async function main() {
       ses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'keith', password: 'password' });
       fs = await ses.fs();
+
+      gses = await api.login({ api_root: 'http://127.0.0.1:3000/api', name: 'guest', password: 'password' });
 
       memses = await mem.login({ name: 'guest', password: '' });
       fs1 = await memses.fs();

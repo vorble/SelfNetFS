@@ -34,6 +34,7 @@ export interface SNFSFileSystemGetOptions {
 
 export interface SNFSUserInfo {
   name: string;
+  admin: boolean;
   fs: SNFSFileSystemAccess;
   union: SNFSFileSystemAccess[];
 }
@@ -41,6 +42,7 @@ export interface SNFSUserInfo {
 export interface SNFSUserOptions {
   name?: string;
   password?: string;
+  admin?: boolean;
   fs?: string;
   union?: string[];
 }
