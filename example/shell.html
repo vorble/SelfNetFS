@@ -116,6 +116,39 @@
       }
     });
 
+    commands.set('fs', async (...args) => {
+      if (args.length == 0) {
+        if (fs == null) {
+          shell.log('fs: no fs');
+          return;
+        }
+        // You don't get good visibility into what's unioned together
+        // when looking at fs. This is something that can be addressed later.
+        shell.log(`${ fs.fsno } ${ fs.name }`);
+      } else {
+        const opts = argparse(args, ['--union']);
+        if (opts.args.length != 1) {
+          shell.log('fs: usage: fs fsno [--union fsno,fsno,...]');
+        }
+        if (ses == null) {
+          shell.log('fs: not logged in');
+          return;
+        }
+        const fsno = opts.args[0];
+        const fsget = {};
+        if (typeof opts['--union'] !== 'undefined') {
+          fsget.union = opts['--union'].split(',');
+        }
+        try {
+          fs = await ses.fsget(fsno, fsget);
+          shell.log(`${ fs.fsno } ${ fs.name }`);
+        } catch(err) {
+          handleErr(err);
+          return;
+        }
+      }
+    });
+
     commands.set('useradd', async (...args) => {
       const opts = argparse(args, ['--name', '--password', '--admin', '--fs', '--union']);
       if (opts.args.length != 0) {
@@ -439,6 +472,7 @@
       shell.log('usermod name [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
       shell.log('userdel name');
       shell.log('userlist');
+      shell.log('fs fsno [--union fsno,fsno,...]');
       shell.log('fsadd --name new_name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
       shell.log('fsmod fsno [--name new_name] [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
       shell.log('fsdel fsno');
