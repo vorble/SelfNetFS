@@ -80,6 +80,22 @@
       }
     });
 
+    commands.set('userlist', async (...args) => {
+      if (args.length != 0) {
+        shell.log('userlist: usage: userlist');
+        return;
+      }
+      if (ses == null) {
+        shell.log('userlist: not logged in');
+        return;
+      }
+      const users = await ses.userlist();
+      for (const user of users) {
+        shell.log(`${ user.name} ${ (user.fs || []).fsno } ${ JSON.stringify(user.union.map(u => u.fsno)) }`);
+      }
+      shell.log(`${ users.length } user(s)`);
+    });
+
     commands.set('fslist', async (...args) => {
       if (args.length != 0) {
         shell.log('fslist: usage: fslist');
@@ -94,6 +110,27 @@
         shell.log(`${ fs.fsno } ${ fs.name }`);
       }
       shell.log(`${ fss.length } file system(s)`);
+    });
+
+    commands.set('fsdel', async (...args) => {
+      if (args.length != 1) {
+        shell.log('fsdel: usage: fsdel fsno');
+        return;
+      }
+      if (ses == null) {
+        shell.log('fsdel: not logged in');
+        return;
+      }
+      try {
+        await ses.fsdel(args[0]);
+        shell.log(`delted`);
+      } catch (err) {
+        if (err instanceof SNFSError) {
+          shell.log(err.message);
+        } else {
+          throw err;
+        }
+      }
     });
 
     const shell = {
