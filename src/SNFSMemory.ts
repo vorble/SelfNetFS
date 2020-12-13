@@ -210,9 +210,13 @@ export class SNFSSessionMemory extends SNFSSession {
     let union = [];
     let admin = false;
     if (typeof options.fs !== 'undefined') {
-      fs = this._snfs._fss.find(f => f.fsno == options.fs);
-      if (fs == null) {
-        throw new SNFSError('FS not found.');
+      if (options.fs == null) {
+        fs = null;
+      } else {
+        fs = this._snfs._fss.find(f => f.fsno == options.fs);
+        if (fs == null) {
+          throw new SNFSError('FS not found.');
+        }
       }
     }
     if (typeof options.union !== 'undefined') {
@@ -264,11 +268,15 @@ export class SNFSSessionMemory extends SNFSSession {
       new_user.admin = options.admin;
     }
     if (typeof options.fs !== 'undefined') {
-      const fs = this._snfs._fss.find(f => f.fsno == options.fs);
-      if (fs == null) {
-        throw new SNFSError('FS not found.');
+      if (options.fs == null) {
+        new_user.fs = null;
+      } else {
+        const fs = this._snfs._fss.find(f => f.fsno == options.fs);
+        if (fs == null) {
+          throw new SNFSError('FS not found.');
+        }
+        new_user.fs = fs;
       }
-      new_user.fs = fs;
     }
     if (typeof options.union !== 'undefined') {
       const union = [];
