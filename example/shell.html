@@ -63,6 +63,36 @@
       return o.toString();
     }
 
+    // args is your array of command arguments.
+    // options is an array of options, with the dashes,
+    // that take values as the argument.
+    function argparse(args, options) {
+      if (typeof args == 'string') args = args.split(/\s+/);
+      if (options == null) options = [];
+      const optsargs = [];
+      const opts = {};
+      let curopt = null;
+      for (const arg of args) {
+        if (options.indexOf(arg) >= 0) {
+          curopt = arg;
+        } else if (curopt != null) {
+          opts[curopt] = arg;
+          curopt = null
+        } else {
+          if (/^-/.test(arg)) {
+            opts[arg] = true;
+          } else {
+            optsargs.push(arg);
+          }
+        }
+      }
+      return {
+        ...opts,
+        args: optsargs,
+      };
+    }
+
+    // TODO: Reorganize command handlers to match the ordering in the programming interface.
     const commands = new Map(); // [string, async (...args) => {}]
 
     commands.set('connect', async (...args) => {
@@ -86,6 +116,114 @@
       }
     });
 
+    commands.set('useradd', async (...args) => {
+      const opts = argparse(args, ['--name', '--password', '--admin', '--fs', '--union']);
+      if (opts.args.length != 0) {
+        shell.log('useradd: usage: useradd [--name name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
+        return;
+      }
+      if (ses == null) {
+        shell.log('useradd: not logged in');
+        return;
+      }
+      const name = opts.args[0];
+      const useradd = {};
+      if (typeof opts['--name'] !== 'undefined') {
+        useradd.name = opts['--name'];
+      }
+      if (typeof opts['--password'] !== 'undefined') {
+        useradd.password = opts['--password'];
+      }
+      if (typeof opts['--admin'] !== 'undefined') {
+        if (opts['--admin'] != 'true' && opts['--admin'] != 'false') {
+          shell.log('--admin requires true/false as an argument.');
+          return;
+        } else {
+          useradd.admin = opts['--admin'] == 'true';
+        }
+      }
+      if (typeof opts['--fs'] !== 'undefined') {
+        if (opts['--fs'] == 'undefined' || opts['--fs'] == 'null') {
+          useradd.fs = null;
+        } else {
+          useradd.fs = opts['--fs'];
+        }
+      }
+      if (typeof opts['--union'] !== 'undefined') {
+        useradd.union = opts['--union'].split(',');
+      }
+      try {
+        await ses.useradd(useradd);
+        shell.log('Ok');
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('usermod', async (...args) => {
+      const opts = argparse(args, ['--name', '--password', '--admin', '--fs', '--union']);
+      if (opts.args.length != 1) {
+        shell.log('usermod: usage: usermod name [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
+        return;
+      }
+      if (ses == null) {
+        shell.log('usermod: not logged in');
+        return;
+      }
+      const name = opts.args[0];
+      const usermod = {};
+      if (typeof opts['--name'] !== 'undefined') {
+        usermod.name = opts['--name'];
+      }
+      if (typeof opts['--password'] !== 'undefined') {
+        usermod.password = opts['--password'];
+      }
+      if (typeof opts['--admin'] !== 'undefined') {
+        if (opts['--admin'] != 'true' && opts['--admin'] != 'false') {
+          shell.log('--admin requires true/false as an argument.');
+          return;
+        } else {
+          usermod.admin = opts['--admin'] == 'true';
+        }
+      }
+      if (typeof opts['--fs'] !== 'undefined') {
+        if (opts['--fs'] == 'undefined' || opts['--fs'] == 'null') {
+          usermod.fs = null;
+        } else {
+          usermod.fs = opts['--fs'];
+        }
+      }
+      if (typeof opts['--union'] !== 'undefined') {
+        usermod.union = opts['--union'].split(',');
+      }
+      try {
+        await ses.usermod(name, usermod);
+        shell.log('Ok');
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('userdel', async (...args) => {
+      if (args.length != 1) {
+        shell.log('userdel: usage: userdel name');
+        return;
+      }
+      if (ses == null) {
+        shell.log('userdel: not logged in');
+        return;
+      }
+      try {
+        await ses.userdel(args[0]);
+        shell.log(`delted`);
+      } catch (err) {
+        handleErr(err);
+        return;
+      }
+    });
+
     commands.set('userlist', async (...args) => {
       if (args.length != 0) {
         shell.log('userlist: usage: userlist');
@@ -95,11 +233,16 @@
         shell.log('userlist: not logged in');
         return;
       }
-      const users = await ses.userlist();
-      for (const user of users) {
-        shell.log(`${ user.name} ${ (user.fs || []).fsno } ${ JSON.stringify(user.union.map(u => u.fsno)) }`);
+      try {
+        const users = await ses.userlist();
+        for (const user of users) {
+          shell.log(`${ user.name } ${ (user.fs || []).fsno || null } ${ JSON.stringify(user.union.map(u => u.fsno)) }`);
+        }
+        shell.log(`${ users.length } user(s)`);
+      } catch(err) {
+        handleErr(err);
+        return;
       }
-      shell.log(`${ users.length } user(s)`);
     });
 
     commands.set('fslist', async (...args) => {
@@ -111,11 +254,87 @@
         shell.log('fslist: not logged in');
         return;
       }
-      const fss = await ses.fslist();
-      for (const fs of fss) {
-        shell.log(`${ fs.fsno } ${ fs.name }`);
+      try {
+        const fss = await ses.fslist();
+        for (const fs of fss) {
+          shell.log(`${ fs.fsno } ${ fs.name }`);
+        }
+        shell.log(`${ fss.length } file system(s)`);
+      } catch(err) {
+        handleErr(err);
+        return;
       }
-      shell.log(`${ fss.length } file system(s)`);
+    });
+
+    commands.set('fsmod', async (...args) => {
+      const opts = argparse(args, ['--name', '--max-files', '--max-storage', '--max-depth', '--max-path']);
+      if (opts.args.length != 1) {
+        shell.log('fsmod: usage: fsmod fsno [--name new_name] [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
+        return;
+      }
+      if (ses == null) {
+        shell.log('fsmod: not logged in');
+        return;
+      }
+      const fsno = opts.args[0];
+      const fsmod = {};
+      if (typeof opts['--name'] !== 'undefined') {
+        fsmod.name = opts['--name'];
+      }
+      if (typeof opts['--max-files'] !== 'undefined') {
+        fsmod.max_files = opts['--max-files'];
+      }
+      if (typeof opts['--max-storage'] !== 'undefined') {
+        fsmod.max_storage = opts['--max-storage'];
+      }
+      if (typeof opts['--max-depth'] !== 'undefined') {
+        fsmod.max_depth = opts['--max-depth'];
+      }
+      if (typeof opts['--max-path'] !== 'undefined') {
+        fsmod.max_path = opts['--max-path'];
+      }
+      try {
+        await ses.fsmod(fsno, fsmod);
+        shell.log('Ok');
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('fsadd', async (...args) => {
+      const opts = argparse(args, ['--name', '--max-files', '--max-storage', '--max-depth', '--max-path']);
+      if (opts.args.length != 0 || typeof opts['--name'] === 'undefined') {
+        shell.log('fsadd: usage: fsadd --name new_name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
+        return;
+      }
+      if (ses == null) {
+        shell.log('fsadd: not logged in');
+        return;
+      }
+      const fsadd = {};
+      if (typeof opts['--name'] !== 'undefined') {
+        fsadd.name = opts['--name'];
+      }
+      if (typeof opts['--max-files'] !== 'undefined') {
+        fsadd.max_files = opts['--max-files'];
+      }
+      if (typeof opts['--max-storage'] !== 'undefined') {
+        fsadd.max_storage = opts['--max-storage'];
+      }
+      if (typeof opts['--max-depth'] !== 'undefined') {
+        fsadd.max_depth = opts['--max-depth'];
+      }
+      if (typeof opts['--max-path'] !== 'undefined') {
+        fsadd.max_path = opts['--max-path'];
+      }
+      try {
+        const result = await ses.fsadd(fsadd);
+        shell.log(`${ result.fsno } ${ result.name }`);
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
     });
 
     commands.set('fsdel', async (...args) => {
@@ -139,6 +358,10 @@
     commands.set('ls', async (...args) => {
       if (args.length != 1) {
         shell.log('ls: usage: ls path');
+        return;
+      }
+      if (fs == null) {
+        shell.log('ls: no fs');
         return;
       }
       try {
@@ -210,6 +433,23 @@
       }
     });
 
+    commands.set('help', async (...args) => {
+      shell.log('connect api_root user password');
+      shell.log('useradd [--name name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
+      shell.log('usermod name [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
+      shell.log('userdel name');
+      shell.log('userlist');
+      shell.log('fsadd --name new_name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
+      shell.log('fsmod fsno [--name new_name] [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
+      shell.log('fsdel fsno');
+      shell.log('fslist');
+      shell.log('ls path');
+      shell.log('cat path');
+      shell.log('stat path');
+      shell.log('unlink path');
+      shell.log('mv path newpath');
+    });
+
     const shell = {
       log: (...args) => {
         const text = document.createTextNode(args.map(repr).join(' ') + '\n');
@@ -233,6 +473,8 @@
 
     $readline.onkeydown = (e) => {
       // console.log(e);
+      // TODO: It would be nice to be able to press up/down
+      // to go back/forth in the history.
       if (e.key == 'Enter') {
         const command = e.target.value;
         shell.log($prompt.innerText + command);
