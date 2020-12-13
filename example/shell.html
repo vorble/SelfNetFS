@@ -78,6 +78,12 @@
         handleErr(err);
         return;
       }
+      try {
+        fs = await ses.fs();
+      } catch (err) {
+        handleErr(err);
+        return;
+      }
     });
 
     commands.set('userlist', async (...args) => {
@@ -125,11 +131,82 @@
         await ses.fsdel(args[0]);
         shell.log(`delted`);
       } catch (err) {
-        if (err instanceof SNFSError) {
-          shell.log(err.message);
-        } else {
-          throw err;
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('ls', async (...args) => {
+      if (args.length != 1) {
+        shell.log('ls: usage: ls path');
+        return;
+      }
+      try {
+        const ents = await fs.readdir(args[0]);
+        for (const ent of ents) {
+          let name = ent.name;
+          if (ent.kind == SNFSNodeKind.Directory) {
+            name += '/';
+          }
+          shell.log(`${ name }`);
         }
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('cat', async (...args) => {
+      if (args.length != 1) {
+        shell.log('cat: usage: cat path');
+        return;
+      }
+      try {
+        const result = await fs.readfile(args[0]);
+        shell.log(tdec(result.data));
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('stat', async (...args) => {
+      if (args.length != 1) {
+        shell.log('stat: usage: stat path');
+        return;
+      }
+      try {
+        const result = await fs.stat(args[0]);
+        shell.log(JSON.stringify(result, null, 2));
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('unlink', async (...args) => {
+      if (args.length != 1) {
+        shell.log('unlink: usage: unlink path');
+        return;
+      }
+      try {
+        await fs.unlink(args[0]);
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('mv', async (...args) => {
+      if (args.length != 2) {
+        shell.log('mv: usage: mv path newpath');
+        return;
+      }
+      try {
+        await fs.move(args[0], args[1]);
+      } catch(err) {
+        handleErr(err);
+        return;
       }
     });
 
@@ -187,6 +264,12 @@
           shell.log('Success.');
         } catch(err) {
           handleErr(err);
+        }
+        try {
+          fs = await ses.fs();
+        } catch (err) {
+          handleErr(err);
+          return;
         }
       }
     }
