@@ -98,6 +98,7 @@ handlers.set('login', async (req, res) => {
   const token = tokengen();
   sessions.set(token, session);
   sessionfss.set(token, new Map<string, SNFSFileSystem>());
+  // TODO: Expire the session in the session/sessionfss maps at this time too.
   res.cookie('token', token, { path: '/', sameSite: 'None', secure: true, maxAge: 60 * 60 * 24 * 30 * 1000 });
   return Promise.resolve({ token });
 });
@@ -105,6 +106,7 @@ handlers.set('login', async (req, res) => {
 handlers.set('resume', async (req, res) => {
   const { token } = req.cookies;
   const session = getSession(token); // Just for the throw if the session isn't authorized.
+  // TODO: Should make a new session token and expire the old one.
   res.cookie('token', token, { path: '/', sameSite: 'None', secure: true, maxAge: 60 * 60 * 24 * 30 * 1000 });
   return Promise.resolve({});
 });

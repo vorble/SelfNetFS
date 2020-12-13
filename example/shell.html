@@ -64,6 +64,7 @@
     }
 
     const commands = new Map(); // [string, async (...args) => {}]
+
     commands.set('connect', async (...args) => {
       if (args.length != 3) {
         shell.log('connect: usage: connect api_root user password');
@@ -77,6 +78,22 @@
         handleErr(err);
         return;
       }
+    });
+
+    commands.set('fslist', async (...args) => {
+      if (args.length != 0) {
+        shell.log('fslist: usage: fslist');
+        return;
+      }
+      if (ses == null) {
+        shell.log('fslist: not logged in');
+        return;
+      }
+      const fss = await ses.fslist();
+      for (const fs of fss) {
+        shell.log(`${ fs.fsno } ${ fs.name }`);
+      }
+      shell.log(`${ fss.length } file system(s)`);
     });
 
     const shell = {
