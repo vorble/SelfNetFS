@@ -104,6 +104,7 @@
       try {
         ses = await api.login({ api_root, name, password });
         localStorage.setItem('snfs_api_root', api_root);
+        localStorage.setItem('pool', ses._pool);
       } catch (err) {
         handleErr(err);
         return;
@@ -533,10 +534,11 @@
     async function main() {
       shell.log('SelfNetFS Shell');
       const api_root = localStorage.getItem('snfs_api_root');
+      const pool = localStorage.getItem('pool');
       if (api_root != null) {
         shell.log(`Resuming session at ${api_root}...`);
         try {
-          ses = await api.resume(api_root);
+          ses = await api.resume(api_root, pool);
           shell.log('Success.');
         } catch(err) {
           handleErr(err);

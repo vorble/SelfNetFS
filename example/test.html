@@ -12,16 +12,9 @@
 
     let api = new SNFSHttp();
     let ses = null;
+    let ses2 = null;
     let fs = null;
-
-    let gses = null;
-    let gfs = null;
-
-    let mem = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
-    let memses = null;
-    let fs1 = null;
     let fs2 = null;
-    let fs3 = null;
 
     function tenc(text) {
       return new TextEncoder().encode(text);
@@ -32,59 +25,20 @@
     }
 
     async function main() {
+      const pool = localStorage.getItem('pool');
       try {
-        ses = await api.resume('https://selfnetfs-api.home.arpa/api');
+        ses = await api.resume('https://selfnetfs-api.home.arpa', pool);
         console.log('Successfully resumed session.');
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
-        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/api', name: 'keith', password: 'password' });
+        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa', name: 'keith', password: 'password' });
+        localStorage.setItem('pool', ses._pool);
       }
       fs = await ses.fs();
+
       /*
-
-      gses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/api', name: 'guest', password: 'password' });
-
-      mem.bootstrap('guest', '');
-      memses = await mem.login({ name: 'guest', password: '' });
-      fs1 = await memses.fs();
-
-      await fs1.writefile('/hi', tenc('test text'), {});
-      await fs1.writefile('/hi/there', tenc('this creates /hi'), {});
-      await fs1.writefile('/hi/there/person', tenc('this creates /hi/there'), {});
-      {
-        const list = await fs1.readdir('/');
-        if (list.length != 2) {
-          throw new Error('Should have two entries.');
-        }
-      }
-      {
-        const list = await fs1.readdir('/hi');
-        if (list.length != 2) {
-          throw new Error('Should have two entries.');
-        }
-      }
-
-      const fs2info = await memses.fsadd({
-        name: 'fs2',
-      });
-      fs2 = await memses.fsget(fs2info.fsno, {});
-
-      await fs2.writefile('/thanks', tenc('fs2'), {});
-      await fs2.writefile('/thanks/for', tenc('fs2'), {});
-      await fs2.writefile('/thanks/for/playing', tenc('fs2'), {});
-
-      const fs3info = await memses.fsadd({
-        name: 'fs3',
-      });
-      fs3 = await memses.fsget(fs3info.fsno, {});
-
-      await fs3.writefile('/thanks', tenc('fs3'), {});
-      await fs3.writefile('/thanks/for', tenc('fs3'), {});
-      await fs3.writefile('/thanks/for/watching', tenc('fs3'), {});
-
-      await memses.usermod('guest', {
-        union: [fs2.fsno, fs3.fsno],
-      });
+      ses2 = await api.login({ api_root: 'https://selfnetfs-api.home.arpa', name: 'keith', password: 'password' });
+      fs2 = await ses2.fs();
       */
     }
 

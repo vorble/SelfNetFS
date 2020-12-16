@@ -16,8 +16,10 @@ import {
 import { SNFSPasswordModuleHash } from './SNFSPasswordModuleHash';
 import SNFSMemorySerializer from './SNFSMemorySerializer';
 import { tokengen } from './token';
+import { ServerSessionManager, ServerSession } from './session';
 
 let snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+const sessions = new ServerSessionManager();
 
 try {
   const data = fs.readFileSync('database.json').toString('utf-8');
@@ -48,10 +50,31 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
   process.exit(0);
 }
 
+function lookupSession(req, res, next) {
+  const { pool } = req.params;
+  const session = sessions.lookup(req.cookies[pool]);
+  if (session == null) {
+    return next(new SNFSError('Expired.'));
+  }
+  res.locals.session = session;
+  next();
+}
+
+function lookupFileSystem(req, res, next) {
+  const fs = res.locals.session.lookupFileSystem(req.body.fstoken);
+  if (fs == null) {
+    return next(new SNFSError('File system not found.'));
+  }
+  res.locals.fs = fs;
+  next();
+}
+
 const app = express();
 
 app.use(cookieParser());
+
 app.use(bodyParser.json());
+
 app.use((req, res, next) => {
   const origin = req.headers.origin || '*';
   res.header('Access-Control-Allow-Origin', origin);
@@ -60,227 +83,281 @@ app.use((req, res, next) => {
   next();
 });
 
-const handlers = new Map<string, (req, res) => Promise<any>>();
-const sessions = new Map<string, SNFSSession>();
-const sessionfss = new Map<string, Map<string, SNFSFileSystem>>();
-
-function getSession(token: string): SNFSSession {
-  const session = sessions.get(token);
-  if (session == null) {
-    throw new SNFSError('Not authorized.');
-  }
-  return session;
-}
-
-interface SessionAndFS {
-  session: SNFSSession;
-  fs: SNFSFileSystem;
-}
-function getSessionAndFS(token: string, fstoken: string): SessionAndFS {
-  const session = sessions.get(token);
-  if (session == null) {
-    throw new SNFSError('Not authorized.');
-  }
-  const fss = sessionfss.get(token);
-  if (fss == null) {
-    throw new Error('Missing fss.'); // Triggers 500 to browser, not SNFSError.
-  }
-  const fs = fss.get(fstoken);
-  if (fs == null) {
-    throw new SNFSError('Not authorized.');
-  }
-  return { session, fs };
-}
-
-handlers.set('login', async (req, res) => {
-  const { name, password } = req.body;
-  const session = await snfs.login({ name, password });
-  const token = tokengen();
-  sessions.set(token, session);
-  sessionfss.set(token, new Map<string, SNFSFileSystem>());
-  // TODO: Expire the session in the session/sessionfss maps at this time too.
-  res.cookie('token', token, { path: '/', sameSite: 'None', secure: true, maxAge: 60 * 60 * 24 * 30 * 1000 });
-  return Promise.resolve({ token });
-});
-
-handlers.set('resume', async (req, res) => {
-  const { token } = req.cookies;
-  const session = getSession(token); // Just for the throw if the session isn't authorized.
-  // TODO: Should make a new session token and expire the old one.
-  res.cookie('token', token, { path: '/', sameSite: 'None', secure: true, maxAge: 60 * 60 * 24 * 30 * 1000 });
-  return Promise.resolve({});
-});
-
-handlers.set('logout', async (req, res) => {
-  const { token } = req.cookies;
-  const session = getSession(token); // Just for the throw if the session isn't authorized.
-  sessions.delete(token);
-  sessionfss.delete(token);
-  res.clearCookie('token', { path: '/', sameSite: 'None', secure: true, maxAge: 60 * 60 * 24 * 30 * 1000 });
-  return Promise.resolve({});
-});
-
-handlers.set('fs', async (req, res) => {
-  const { token } = req.cookies;
-  const session = getSession(token);
-  const fs = await session.fs();
-  const fstoken = tokengen();
-  const fss = sessionfss.get(token);
-  fss.set(fstoken, fs);
-  const { name, fsno, limits } = fs;
-  return Promise.resolve({ fstoken, name, fsno, limits });
-});
-
-handlers.set('useradd', async (req, res) => {
-  const { token } = req.cookies;
-  const { options } = req.body;
-  const session = getSession(token);
-  return Promise.resolve(await session.useradd(options));
-});
-
-handlers.set('usermod', async (req, res) => {
-  const { token } = req.cookies;
-  const { name, options } = req.body;
-  const session = getSession(token);
-  return Promise.resolve(await session.usermod(name, options));
-});
-
-handlers.set('userdel', async (req, res) => {
-  const { token } = req.cookies;
-  const { name } = req.body;
-  const session = getSession(token);
-  await session.userdel(name);
-  return Promise.resolve({});
-});
-
-handlers.set('userlist', async (req, res) => {
-  const { token } = req.cookies;
-  const session = getSession(token);
-  return Promise.resolve(await session.userlist());
-});
-
-handlers.set('fsadd', async (req, res) => {
-  const { token } = req.cookies;
-  const { options } = req.body;
-  const session = getSession(token);
-  return Promise.resolve(await session.fsadd(options));
-});
-
-handlers.set('fsmod', async (req, res) => {
-  const { token } = req.cookies;
-  const { fsno, options } = req.body;
-  const session = getSession(token);
-  return Promise.resolve(await session.fsmod(fsno, options));
-});
-
-handlers.set('fsdel', async (req, res) => {
-  const { token } = req.cookies;
-  const { fsno } = req.body;
-  const session = getSession(token);
-  await session.fsdel(fsno);
-  return Promise.resolve({});
-});
-
-handlers.set('fslist', async (req, res) => {
-  const { token } = req.cookies;
-  const session = getSession(token);
-  return Promise.resolve(await session.fslist());
-});
-
-handlers.set('fsget', async (req, res) => {
-  const { token } = req.cookies;
-  const { fsno, options } = req.body;
-  const session = getSession(token);
-  const fs = await session.fsget(fsno, options);
-  const fstoken = tokengen();
-  const fss = sessionfss.get(token);
-  fss.set(fstoken, fs);
-  {
-    const { name, fsno, limits } = fs;
-    return Promise.resolve({ fstoken, name, fsno, limits });
-  }
-});
-
-handlers.set('readdir', async (req, res) => {
-  const { token } = req.cookies;
-  const { fstoken, path } = req.body;
-  const { session, fs } = getSessionAndFS(token, fstoken);
-  return Promise.resolve(await fs.readdir(path));
-});
-
-handlers.set('stat', async (req, res) => {
-  const { token } = req.cookies;
-  const { fstoken, path } = req.body;
-  const { session, fs } = getSessionAndFS(token, fstoken);
-  const result = await fs.stat(path);
-  return Promise.resolve({
-    ...result,
-    ctime: result.ctime.getTime(),
-    mtime: result.mtime.getTime(),
-  });
-});
-
-handlers.set('writefile', async (req, res) => {
-  const { token } = req.cookies;
-  const { fstoken, path, data, options } = req.body;
-  const { session, fs } = getSessionAndFS(token, fstoken);
-  return Promise.resolve(await fs.writefile(path, Buffer.from(data, 'base64'), options));
-});
-
-handlers.set('readfile', async (req, res) => {
-  const { token } = req.cookies;
-  const { fstoken, path } = req.body;
-  const { session, fs } = getSessionAndFS(token, fstoken);
-  const result = await fs.readfile(path);
-  // TODO: Typescript isn't happy because Uint8Array toString() method doesn't take an argument.
-  const facade: any = result.data;
-  return {
-    data: facade.toString('base64'),
-  };
-});
-
-handlers.set('unlink', async (req, res) => {
-  const { token } = req.cookies;
-  const { fstoken, path } = req.body;
-  const { session, fs } = getSessionAndFS(token, fstoken);
-  return Promise.resolve(await fs.unlink(path));
-});
-
-handlers.set('move', async (req, res) => {
-  const { token } = req.cookies;
-  const { fstoken, path, newpath } = req.body;
-  const { session, fs } = getSessionAndFS(token, fstoken);
-  return Promise.resolve(await fs.move(path, newpath));
-});
-
-app.options('/api', (req, res) => {
-  res.end();
-});
-app.post('/api', async (req, res) => {
+app.use((req, res, next) => {
+  // TODO: Check what the browser says they'll accept, must be application/json
   if (typeof req.body != 'object') {
     return res.status(400).send({ message: 'Invalid request: missing request body.' });
   }
+  res.locals.finish = (response) => {
+    fs.writeFileSync('database.json', SNFSMemorySerializer.stringify(snfs));
+    return res.status(200).send(response);
+  };
+  next();
+});
+
+// TODO: All endpoints need a try/catch block that passes to next()
+app.options('/login', (req, res) => { res.end(); });
+app.post('/login', async (req, res, next) => {
   try {
-    const handler = handlers.get(req.body.op);
-    if (handler != null) {
-      const response = await handler(req, res);
-      fs.writeFileSync('database.json', SNFSMemorySerializer.stringify(snfs));
-      return res.status(200).send(response);
-    }
+    const finish = res.locals.finish;
+    const { name, password } = req.body;
+    const ses = await snfs.login({ name, password });
+    const session = sessions.create(ses);
+    res.cookie(session.pool, session.token, { path: '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
+    finish({ pool: session.pool });
   } catch (err) {
-    if (err instanceof SNFSError) {
-      return res.status(400).send({ message: err.message });
-    } else {
-      console.error(err);
-      return res.status(500).send({ message: 'Internal server error.' });
-    }
+    next(err);
   }
-  res.status(400).send({ message: 'Invalid request: unexpected op.' });
+});
+
+app.options('/:pool/logout', (req, res) => { res.end(); });
+app.post('/:pool/logout', async (req, res, next) => {
+  try {
+    const finish = res.locals.finish;
+    const session = sessions.logout(req.cookies.token);
+    if (session == null) {
+      throw new SNFSError('Expired.');
+    }
+    res.clearCookie(session.pool, { path: '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
+    finish({});
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/resume', (req, res) => { res.end(); });
+app.post('/:pool/resume', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    session.updateExpires();
+    res.cookie(session.pool, session.token, { path: '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
+    finish({});
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/fs', (req, res) => { res.end(); });
+app.post('/:pool/fs', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { fs, fstoken } = await session.fs();
+    const { name, fsno, limits } = fs;
+    finish({ fstoken, name, fsno, limits });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/useradd', (req, res) => { res.end(); });
+app.post('/:pool/useradd', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { options } = req.body;
+    finish(await session.session.useradd(options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/usermod', (req, res) => { res.end(); });
+app.post('/:pool/usermod', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { name, options } = req.body;
+    finish(await session.session.usermod(name, options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/userdel', (req, res) => { res.end(); });
+app.post('/:pool/userdel', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { name } = req.body;
+    await session.session.userdel(name);
+    finish({});
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/userlist', (req, res) => { res.end(); });
+app.post('/:pool/userlist', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    finish(await session.session.userlist());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/fsadd', (req, res) => { res.end(); });
+app.post('/:pool/fsadd', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { options } = req.body;
+    finish(await session.session.fsadd(options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/fsmod', (req, res) => { res.end(); });
+app.post('/:pool/fsmod', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { fsno, options } = req.body;
+    finish(await session.session.fsmod(fsno, options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/fsdel', (req, res) => { res.end(); });
+app.post('/:pool/fsdel', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { fsno } = req.body;
+    await session.session.fsdel(fsno);
+    finish({});
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/fslist', (req, res) => { res.end(); });
+app.post('/:pool/fslist', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    finish(await session.session.fslist());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/fsget', (req, res) => { res.end(); });
+app.post('/:pool/fsget', lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const finish = res.locals.finish;
+    const { fsno, options } = req.body;
+    const { fs, fstoken } = await session.fsget(fsno, options);
+    const { name, limits } = fs;
+    finish({ fstoken, name, fsno, limits });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/readdir', (req, res) => { res.end(); });
+app.post('/:pool/readdir', lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    const finish = res.locals.finish;
+    const { path } = req.body;
+    finish(await fs.readdir(path));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/stat', (req, res) => { res.end(); });
+app.post('/:pool/stat', lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    const finish = res.locals.finish;
+    const { path } = req.body;
+    const result = await fs.stat(path);
+    finish({
+      ...result,
+      ctime: result.ctime.getTime(),
+      mtime: result.mtime.getTime(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/writefile', (req, res) => { res.end(); });
+app.post('/:pool/writefile', lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    const finish = res.locals.finish;
+    const { path, data, options } = req.body;
+    finish(await fs.writefile(path, Buffer.from(data, 'base64'), options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/readfile', (req, res) => { res.end(); });
+app.post('/:pool/readfile', lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    const finish = res.locals.finish;
+    const { path } = req.body;
+    const result = await fs.readfile(path);
+    // TODO: Typescript isn't happy because Uint8Array toString() method doesn't take an argument.
+    const facade: any = result.data;
+    finish({
+      ...result,
+      data: facade.toString('base64'),
+    });
+  } catch(err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/unlink', (req, res) => { res.end(); });
+app.post('/:pool/unlink', lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    const finish = res.locals.finish;
+    const { path } = req.body;
+    finish(await fs.unlink(path));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:pool/move', (req, res, next) => { res.end(); });
+app.post('/:pool/move', lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    const finish = res.locals.finish;
+    const { path, newpath } = req.body;
+    finish(await fs.move(path, newpath));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.use((req, res) => {
+  res.status(404).send({ message: 'Invalid endpoint.' });
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof SNFSError) {
+    return res.status(400).send({ message: err.message });
+  }
+  console.error(err);
+  return res.status(500).send({ message: 'Internal server error.' });
 });
 
 var server = app.listen(4000, () => {
    var host = server.address().address;
    var port = server.address().port;
-
    console.log("Listening on http://%s:%s", host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
 });
