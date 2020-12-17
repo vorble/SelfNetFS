@@ -18,7 +18,7 @@ import {
   SNFSUserOptions,
   SNFSWriteFile,
   SNFSWriteFileOptions,
-} from './SNFS';
+} from './snfs';
 import {
   bufferToBase64,
   base64ToBuffer,

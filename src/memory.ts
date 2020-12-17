@@ -18,7 +18,7 @@ import {
   SNFSUserOptions,
   SNFSWriteFile,
   SNFSWriteFileOptions,
-} from './SNFS';
+} from './snfs';
 
 const LIMITS = {
   max_files: 200,

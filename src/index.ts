@@ -1,4 +1,4 @@
-export * from './SNFS';
-export * from './SNFSHttp';
-export * from './SNFSMemory';
+export * from './snfs';
+export * from './http';
+export * from './memory';
 export * from './uuid';

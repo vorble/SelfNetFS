@@ -12,7 +12,7 @@ import {
   SNFSSession,
   SNFSFileSystem,
 } from '../src/SNFS';
-import { SNFSPasswordModuleHash } from './SNFSPasswordModuleHash';
+import { SNFSPasswordModuleHash } from './password';
 import Persist from './persist';
 import { tokengen } from './token';
 import { ServerSessionManager, ServerSession } from './session';
