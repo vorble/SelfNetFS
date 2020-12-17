@@ -133,7 +133,7 @@ export class SNFSMemory extends SNFS {
     const user = {
       name: name,
       admin: true,
-      password: this._password_module.hash(''),
+      password: this._password_module.hash(password),
       fs: fs,
       union: [],
     };

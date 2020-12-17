@@ -1,3 +1,5 @@
+import fs = require('fs');
+
 import {
   SNFSError,
   SNFSFileSystemLimits,
@@ -9,14 +11,46 @@ import {
   UserRecord,
 } from '../src/SNFSMemory';
 
+export default class Persist {
+  save(owner: string, snfs: SNFSMemory): void {
+    const content = stringify(snfs);
+    try {
+      fs.writeFileSync('database/' + owner + '.json', content);
+    } catch (err) {
+      if (err.code == 'ENOENT') {
+        fs.mkdirSync('database');
+        fs.writeFileSync('database/' + owner + '.json', content);
+      }
+    }
+  }
+
+  // load() might get called for non-existant owners very
+  // often, so it is designed not to throw and instead returns
+  // null if there is a problem (usually file not found).
+  load(owner: string, factory: () => SNFSMemory): SNFSMemory {
+    try {
+      const content = fs.readFileSync('database/' + owner + '.json');
+      const snfs = factory();
+      parse(content.toString('utf-8'), snfs);
+      return snfs;
+    } catch (err) {
+      // File not found errors are expected.
+      if (err.code != 'ENOENT') {
+        console.error(err);
+      }
+      return null;
+    }
+  }
+}
+
 // Extracts the content of an SNFSMemory instance so that the parse() function can
 // restore the data into an SNFSMemory instance at a later time.
-export function stringify(snfs: SNFSMemory): string {
+function stringify(snfs: SNFSMemory): string {
   return JSON.stringify(dumpSNFSMemory(snfs));
 }
 
 // Replace the contents of the given SNFSMemory instance.
-export function parse(dump: string, snfs: SNFSMemory): void {
+function parse(dump: string, snfs: SNFSMemory): void {
   const obj = JSON.parse(dump);
   loadSNFSMemory(obj, snfs);
 }
@@ -132,8 +166,3 @@ function loadUserRecord(user: any, snfs: SNFSMemory): UserRecord {
     union: user.union.map(lookupFS),
   };
 }
-
-export default {
-  stringify,
-  parse,
-};
