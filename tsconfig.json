@@ -4,6 +4,7 @@
     "sourceMap": true
   },
   "include": [
-    "src/**/*.ts"
+    "lib/**/*.ts",
+    "browser/**/*.ts"
   ]
 }

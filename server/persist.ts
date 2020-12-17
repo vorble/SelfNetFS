@@ -3,13 +3,13 @@ import fs = require('fs');
 import {
   SNFSError,
   SNFSFileSystemLimits,
-} from '../src/SNFS';
+} from '../lib/snfs';
 import {
   SNFSFileMemory,
   SNFSFileSystemMemory,
   SNFSMemory,
   UserRecord,
-} from '../src/SNFSMemory';
+} from '../lib/memory';
 
 export default class Persist {
   save(owner: string, snfs: SNFSMemory): void {

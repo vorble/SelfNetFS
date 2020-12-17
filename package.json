@@ -2,7 +2,7 @@
   "name": "selfnetfs",
   "version": "1.0.0",
   "description": "selfnetfs",
-  "main": "src/index.ts",
+  "main": "browser/index.ts",
   "scripts": {
     "build": "webpack",
     "start": "ts-node --project tsconfig.server.json server/index.ts",

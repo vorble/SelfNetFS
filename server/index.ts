@@ -6,12 +6,12 @@ import uuid = require('uuid');
 import {
   SNFSMemory,
   SNFSPasswordModule,
-} from '../src/SNFSMemory';
+} from '../lib/memory';
 import {
   SNFSError,
   SNFSSession,
   SNFSFileSystem,
-} from '../src/SNFS';
+} from '../lib/snfs';
 import { SNFSPasswordModuleHash } from './password';
 import Persist from './persist';
 import { tokengen } from './token';

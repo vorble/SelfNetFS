@@ -3,7 +3,7 @@ import {
   SNFSFileSystem,
   SNFSFileSystemGetOptions,
   SNFSSession,
-} from '../src/SNFS';
+} from '../lib/snfs';
 
 class FSWithToken {
   fs: SNFSFileSystem;
