@@ -63,13 +63,13 @@ export class ServerSession {
     const now = new Date();
     this.token = tokengen();
     this.pool = tokengen();
-    this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30);
+    this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
     this.session = session;
     this.fss = new Map<string, SNFSFileSystem>();
   }
 
   updateExpires() {
-    this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30);
+    this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
   }
 
   lookupFileSystem(fstoken: string): SNFSFileSystem {

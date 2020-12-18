@@ -32,7 +32,7 @@
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
         ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa', name: 'keith', password: 'password' });
-        localStorage.setItem('pool', ses._pool);
+        localStorage.setItem('pool', ses.pool);
       }
       fs = await ses.fs();
 

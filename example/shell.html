@@ -104,7 +104,7 @@
       try {
         ses = await api.login({ api_root, name, password });
         localStorage.setItem('snfs_api_root', api_root);
-        localStorage.setItem('pool', ses._pool);
+        localStorage.setItem('pool', ses.pool);
       } catch (err) {
         handleErr(err);
         return;
