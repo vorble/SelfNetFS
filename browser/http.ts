@@ -30,6 +30,10 @@ export interface SNFSAuthCredentialsHttp extends SNFSAuthCredentials {
   password: string;
 }
 
+function urljoin(...parts: string[]): string {
+  return parts.map(p => p.replace(/^\//, '').replace(/\/$/, '')).join('/');
+}
+
 async function apirequest(endpoint: string, payload) {
   const init: any = {
     method: 'POST',
@@ -69,7 +73,7 @@ export class SNFSHttp extends SNFS {
   }
 
   async login(options: SNFSAuthCredentialsHttp): Promise<SNFSSession> {
-    const result = await apirequest(options.api_root + '/login', {
+    const result = await apirequest(urljoin(options.api_root, 'login'), {
       name: options.name,
       password: options.password,
     });
@@ -77,7 +81,7 @@ export class SNFSHttp extends SNFS {
   }
 
   async resume(api_root: string, pool: string): Promise<SNFSSession> {
-    const result = await apirequest(api_root + '/' + pool + '/resume', {
+    const result = await apirequest(urljoin(api_root, pool, 'resume'), {
     });
     return new SNFSSessionHttp(this, api_root, pool);
   }
@@ -97,25 +101,26 @@ export class SNFSSessionHttp extends SNFSSession {
   }
 
   async logout(): Promise<void> {
-    await apirequest(this._api_root + '/' + this.pool + '/logout', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'logout'), {
     });
+    return result;
   }
 
   async fs(): Promise<SNFSFileSystem> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/fs', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'fs'), {
     });
     return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, result.fstoken, result.name, result.fsno, result.limits);
   }
 
   async useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/useradd', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'useradd'), {
       options,
     });
     return result;
   }
 
   async usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/usermod', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'usermod'), {
       name,
       options,
     });
@@ -123,27 +128,27 @@ export class SNFSSessionHttp extends SNFSSession {
   }
 
   async userdel(name: string): Promise<void> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/userdel', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'userdel'), {
       name,
     });
     return result;
   }
 
   async userlist(): Promise<SNFSUserInfo[]> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/userlist', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'userlist'), {
     });
     return result;
   }
 
   async fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/fsadd', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsadd'), {
       options,
     });
     return result;
   }
 
   async fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/fsmod', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsmod'), {
       fsno,
       options,
     });
@@ -151,20 +156,20 @@ export class SNFSSessionHttp extends SNFSSession {
   }
 
   async fsdel(fsno: string): Promise<void> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/fsdel', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsdel'), {
       fsno,
     });
     return result;
   }
 
   async fslist(): Promise<SNFSFileSystemInfo[]> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/fslist', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'fslist'), {
     });
     return result;
   }
 
   async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
-    const result = await apirequest(this._api_root + '/' + this.pool + '/fsget', {
+    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsget'), {
       fsno,
       options,
     });
