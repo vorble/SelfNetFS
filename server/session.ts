@@ -1,9 +1,13 @@
 import { tokengen } from './token';
 import {
+  SNFSError,
   SNFSFileSystem,
   SNFSFileSystemGetOptions,
   SNFSSession,
 } from '../lib/snfs';
+
+const MAX_SESSIONS = 1000;
+const MAX_FSS = 1000;
 
 class FSWithToken {
   fs: SNFSFileSystem;
@@ -19,6 +23,9 @@ export class ServerSessionManager {
 
   create(ses: SNFSSession): ServerSession {
     this.reap();
+    if (this._sessions.size >= MAX_SESSIONS) {
+      throw new SNFSError('Too many open sessions.');
+    }
     const session = new ServerSession(ses);
     this._sessions.set(session.token, session);
     return session;
@@ -68,7 +75,7 @@ export class ServerSession {
     this.fss = new Map<string, SNFSFileSystem>();
   }
 
-  updateExpires() {
+  updateExpires(): void {
     this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
   }
 
@@ -78,6 +85,9 @@ export class ServerSession {
   }
 
   async fs(): Promise<FSWithToken> {
+    if (this.fss.size >= MAX_FSS) {
+      throw new SNFSError('Too many open file systems on this session.');
+    }
     const fs = await this.session.fs();
     const fstoken = tokengen();
     this.fss.set(fstoken, fs);
@@ -85,6 +95,9 @@ export class ServerSession {
   }
 
   async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<FSWithToken> {
+    if (this.fss.size >= MAX_FSS) {
+      throw new SNFSError('Too many open file systems on this session.');
+    }
     const fs = await this.session.fsget(fsno, options);
     const fstoken = tokengen();
     this.fss.set(fstoken, fs);
