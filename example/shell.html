@@ -467,6 +467,54 @@
       }
     });
 
+    commands.set('upload', async (...args) => {
+      if (args.length != 1) {
+        shell.log('upload: usage: upload path');
+        return;
+      }
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.style.display = 'none';
+      input.click();
+      input.onchange = async (e) => {
+        const file = input.files[0]
+        const buffer = await file.arrayBuffer();
+        const data = new Uint8Array(buffer);
+        try {
+          await fs.writefile(args[0], data);
+        } catch(err) {
+          handleErr(err);
+          return;
+        }
+      };
+    });
+
+    commands.set('download', async (...args) => {
+      if (args.length != 1) {
+        shell.log('download: usage: download path');
+        return;
+      }
+      try {
+        const path = args[0];
+        const basename = path.split('/').pop();
+        const result = await fs.readfile(path);
+        const content = new Blob([result.data], { type: 'octet/stream' });
+        const url = window.URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = basename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() {
+          window.URL.revokeObjectURL(url);
+        }, 10000);
+      } catch(err) {
+        handleErr(err);
+        return;
+      }
+    });
+
     commands.set('help', async (...args) => {
       shell.log('connect api_root user password');
       shell.log('useradd [--name name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
@@ -483,6 +531,8 @@
       shell.log('stat path');
       shell.log('unlink path');
       shell.log('mv path newpath');
+      shell.log('upload path');
+      shell.log('download path');
     });
 
     const shell = {
