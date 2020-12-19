@@ -2,11 +2,13 @@ import {
   SNFS,
   SNFSAuthCredentials,
   SNFSError,
+  SNFSFileSystemDel,
   SNFSFileSystem,
   SNFSFileSystemGetOptions,
   SNFSFileSystemInfo,
-  SNFSFileSystemOptions,
   SNFSFileSystemLimits,
+  SNFSFileSystemOptions,
+  SNFSLogout,
   SNFSMove,
   SNFSNodeKind,
   SNFSReadDir,
@@ -14,6 +16,7 @@ import {
   SNFSSession,
   SNFSStat,
   SNFSUnlink,
+  SNFSUserDel,
   SNFSUserInfo,
   SNFSUserOptions,
   SNFSWriteFile,
@@ -100,7 +103,7 @@ export class SNFSSessionHttp extends SNFSSession {
     this.pool = pool;
   }
 
-  async logout(): Promise<void> {
+  async logout(): Promise<SNFSLogout> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'logout'), {
     });
     return result;
@@ -127,7 +130,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async userdel(name: string): Promise<void> {
+  async userdel(name: string): Promise<SNFSUserDel> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'userdel'), {
       name,
     });
@@ -155,7 +158,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async fsdel(fsno: string): Promise<void> {
+  async fsdel(fsno: string): Promise<SNFSFileSystemDel> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsdel'), {
       fsno,
     });

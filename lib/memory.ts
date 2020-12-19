@@ -2,11 +2,13 @@ import {
   SNFS,
   SNFSAuthCredentials,
   SNFSError,
+  SNFSFileSystemDel,
   SNFSFileSystem,
   SNFSFileSystemGetOptions,
   SNFSFileSystemInfo,
-  SNFSFileSystemOptions,
   SNFSFileSystemLimits,
+  SNFSFileSystemOptions,
+  SNFSLogout,
   SNFSMove,
   SNFSNodeKind,
   SNFSReadDir,
@@ -14,6 +16,7 @@ import {
   SNFSSession,
   SNFSStat,
   SNFSUnlink,
+  SNFSUserDel,
   SNFSUserInfo,
   SNFSUserOptions,
   SNFSWriteFile,
@@ -123,8 +126,7 @@ export class SNFSMemory extends SNFS {
   }
 
   // just for in-memory implementation.
-  // Not necessary to return Promise<void>, so it doesn't
-  // to let the server code be simpler for now.
+  // Note: not async.
   bootstrap(name: string, password: string) {
     if (this._fss.length != 0 || this._users.length != 0) {
       throw new SNFSError('Too late to bootstrap.');
@@ -173,9 +175,9 @@ export class SNFSSessionMemory extends SNFSSession {
     this._logged_in_user = user;
   }
 
-  logout(): Promise<void> {
+  logout(): Promise<SNFSLogout> {
     this._logged_in_user = null;
-    return Promise.resolve();
+    return Promise.resolve({});
   }
 
   fs(): Promise<SNFSFileSystem> {
@@ -297,7 +299,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
-  userdel(name: string): Promise<void> {
+  userdel(name: string): Promise<SNFSUserDel> {
     if (this._logged_in_user == null) {
       throw new SNFSError('Not logged in.');
     }
@@ -312,7 +314,7 @@ export class SNFSSessionMemory extends SNFSSession {
       throw new SNFSError('User not found.');
     }
     this._snfs._users = this._snfs._users.filter(u => u.name != name);
-    return Promise.resolve();
+    return Promise.resolve({});
   }
 
   userlist(): Promise<SNFSUserInfo[]> {
@@ -367,7 +369,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsdel(fsno: string): Promise<void> {
+  fsdel(fsno: string): Promise<SNFSFileSystemDel> {
     if (this._logged_in_user == null) {
       throw new SNFSError('Not logged in.');
     }
@@ -387,7 +389,7 @@ export class SNFSSessionMemory extends SNFSSession {
       }
     }
     this._snfs._fss = this._snfs._fss.filter(x => x.fsno != fsno);
-    return Promise.resolve();
+    return Promise.resolve({});
   }
 
   fslist(): Promise<SNFSFileSystemInfo[]> {

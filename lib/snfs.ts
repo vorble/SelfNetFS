@@ -5,7 +5,7 @@ export abstract class SNFS {
 }
 
 export abstract class SNFSSession {
-  abstract logout(): Promise<void>;
+  abstract logout(): Promise<SNFSLogout>;
   // After login(), if the user is associated with a file system, that file system
   // is returned by this function. For applications that only need access to a single
   // file system, the rest of the methods in this class are not typically used.
@@ -13,12 +13,12 @@ export abstract class SNFSSession {
 
   abstract useradd(options: SNFSUserOptions): Promise<SNFSUserInfo>;
   abstract usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo>;
-  abstract userdel(name: string): Promise<void>;
+  abstract userdel(name: string): Promise<SNFSUserDel>;
   abstract userlist(): Promise<SNFSUserInfo[]>;
 
   abstract fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
   abstract fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
-  abstract fsdel(fsno: string): Promise<void>;
+  abstract fsdel(fsno: string): Promise<SNFSFileSystemDel>;
   abstract fslist(): Promise<SNFSFileSystemInfo[]>;
   abstract fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
 }
@@ -30,6 +30,9 @@ export interface SNFSAuthCredentials {}
 export interface SNFSFileSystemGetOptions {
   writeable: boolean; // Writable bit mask. Set to true to request a writeable fs.
   union: string[]; // Array of fsno
+}
+
+export interface SNFSLogout {
 }
 
 export interface SNFSUserInfo {
@@ -45,6 +48,9 @@ export interface SNFSUserOptions {
   admin?: boolean;
   fs?: string;
   union?: string[];
+}
+
+export interface SNFSUserDel {
 }
 
 export interface SNFSFileSystemAccess {
@@ -72,6 +78,9 @@ export class SNFSFileSystemInfo {
   name: string;
   fsno: string;
   limits: SNFSFileSystemLimits;
+}
+
+export interface SNFSFileSystemDel {
 }
 
 export abstract class SNFSFileSystem {
