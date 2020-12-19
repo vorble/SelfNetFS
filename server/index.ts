@@ -54,6 +54,7 @@ function lookupOwner(req, res, next) {
   let snfs = owners.get(owner);
   if (snfs == null) {
     snfs = persist.load(owner, () => new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash()));
+    owners.set(owner, snfs);
   }
   if (snfs == null) {
     snfs = null_owner;
@@ -102,7 +103,7 @@ app.use((req, res, next) => {
   }
   res.locals.finish = (response) => {
     persist.save(req.params.owner, res.locals.snfs);
-    return res.status(200).send(response);
+    return res.status(200).send(response == null ? {} : response);
   };
   next();
 });
@@ -192,8 +193,7 @@ app.post('/:owner/:pool/userdel', lookupOwner, lookupSession, async (req, res, n
     const session: ServerSession = res.locals.session;
     const finish = res.locals.finish;
     const { name } = req.body;
-    await session.session.userdel(name);
-    finish({});
+    finish(await session.session.userdel(name));
   } catch (err) {
     next(err);
   }
@@ -240,8 +240,7 @@ app.post('/:owner/:pool/fsdel', lookupOwner, lookupSession, async (req, res, nex
     const session: ServerSession = res.locals.session;
     const finish = res.locals.finish;
     const { fsno } = req.body;
-    await session.session.fsdel(fsno);
-    finish({});
+    finish(await session.session.fsdel(fsno));
   } catch (err) {
     next(err);
   }
