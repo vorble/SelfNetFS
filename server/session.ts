@@ -7,11 +7,17 @@ import {
 } from '../lib/snfs';
 
 const MAX_SESSIONS = 1000;
-const MAX_FSS = 1000;
+const MAX_FSS = 10;
 
 class FSWithToken {
   fs: SNFSFileSystem;
   fstoken: string;
+}
+
+class FSWithAccessTime {
+  fs: SNFSFileSystem;
+  fstoken: string;
+  atime: Date; // Last access time
 }
 
 export class ServerSessionManager {
@@ -64,7 +70,7 @@ export class ServerSession {
   pool: string;
   expires: Date;
   session: SNFSSession;
-  fss: Map<string, SNFSFileSystem>;
+  fss: Map<string, FSWithAccessTime>;
 
   constructor(session: SNFSSession) {
     const now = new Date();
@@ -72,7 +78,7 @@ export class ServerSession {
     this.pool = tokengen();
     this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
     this.session = session;
-    this.fss = new Map<string, SNFSFileSystem>();
+    this.fss = new Map<string, FSWithAccessTime>();
   }
 
   updateExpires(): void {
@@ -80,27 +86,51 @@ export class ServerSession {
   }
 
   lookupFileSystem(fstoken: string): SNFSFileSystem {
-    const fs = this.fss.get(fstoken);
-    return fs;
+    const fswat = this.fss.get(fstoken);
+    if (fswat != null) {
+      fswat.atime = new Date();
+      return fswat.fs;
+    }
+    return null;
   }
 
   async fs(): Promise<FSWithToken> {
-    if (this.fss.size >= MAX_FSS) {
-      throw new SNFSError('Too many open file systems on this session.');
-    }
+    this.reap();
     const fs = await this.session.fs();
     const fstoken = tokengen();
-    this.fss.set(fstoken, fs);
+    const atime = new Date();
+    this.fss.set(fstoken, {
+      fs,
+      fstoken,
+      atime,
+    });
     return { fs, fstoken };
   }
 
   async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<FSWithToken> {
-    if (this.fss.size >= MAX_FSS) {
-      throw new SNFSError('Too many open file systems on this session.');
-    }
+    this.reap();
     const fs = await this.session.fsget(fsno, options);
     const fstoken = tokengen();
-    this.fss.set(fstoken, fs);
+    const atime = new Date();
+    this.fss.set(fstoken, {
+      fs,
+      fstoken,
+      atime,
+    });
     return { fs, fstoken };
+  }
+
+  reap(): void {
+    if (this.fss.size >= MAX_FSS) {
+      let stale = null;
+      for (const fswat of this.fss.values()) {
+        if (stale == null || fswat.atime < stale.atime) {
+          stale = fswat;
+        }
+      }
+      if (stale != null) {
+        this.fss.delete(stale.fstoken);
+      }
+    }
   }
 }
