@@ -425,6 +425,9 @@ export class SNFSSessionMemory extends SNFSSession {
             throw new SNFSError('Not authorized.');
         }
       }
+      if (null != this._logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
+        options.writeable = false;
+      }
     }
     const fs = this._snfs._fss.find(fs => fs.fsno == fsno);
     if (fs == null) {
