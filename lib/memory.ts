@@ -155,7 +155,7 @@ export class SNFSMemory extends SNFS {
     }
     const match = this._password_module.check(options.password, user.password);
     if (!match || reject) {
-      throw new SNFSError('AUTHORIZATION_DENIED');
+      throw new SNFSError('Authorization denied.');
     }
     const session = new SNFSSessionMemory(this, user);
     return Promise.resolve(session);
@@ -180,11 +180,11 @@ export class SNFSSessionMemory extends SNFSSession {
 
   fs(): Promise<SNFSFileSystem> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     const fs = this._logged_in_user.fs;
     if (fs == null) {
-      throw new SNFSError('NO_FS');
+      throw new SNFSError('User has no FS.');
     }
     const writeable = true; // File system is writeable by virtue of being assigned the the user.
     return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, this._logged_in_user.union, writeable, this._snfs._uuidgen));
@@ -192,7 +192,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -244,7 +244,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -299,7 +299,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   userdel(name: string): Promise<void> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -317,7 +317,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   userlist(): Promise<SNFSUserInfo[]> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (this._logged_in_user.admin) {
       return Promise.resolve(this._snfs._users.map(userRecordToUserInfo));
@@ -328,7 +328,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -347,7 +347,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -369,7 +369,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   fsdel(fsno: string): Promise<void> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -392,7 +392,7 @@ export class SNFSSessionMemory extends SNFSSession {
 
   fslist(): Promise<SNFSFileSystemInfo[]> {
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (this._logged_in_user.admin) {
       return Promise.resolve(this._snfs._fss.map(fileSystemToInfo));
@@ -413,7 +413,7 @@ export class SNFSSessionMemory extends SNFSSession {
       options.writeable = true;
     }
     if (this._logged_in_user == null) {
-      throw new SNFSError('NOT_LOGGED_IN');
+      throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       const fsnos = [fsno, ...options.union];
@@ -449,7 +449,7 @@ function pathnormforfile(path: string) {
     throw new SNFSError('File must have a name.');
   }
   if (path[path.length - 1] == '/') {
-    throw new SNFSError('File path may not end with /');
+    throw new SNFSError('File path may not end with /.');
   }
   const parts = path.split('/');
   const bad = parts.find(x => x == '.' || x == '..');
