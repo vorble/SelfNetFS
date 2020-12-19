@@ -316,16 +316,16 @@
         fsmod.name = opts['--name'];
       }
       if (typeof opts['--max-files'] !== 'undefined') {
-        fsmod.max_files = opts['--max-files'];
+        fsmod.max_files = Number(opts['--max-files']);
       }
       if (typeof opts['--max-storage'] !== 'undefined') {
-        fsmod.max_storage = opts['--max-storage'];
+        fsmod.max_storage = Number(opts['--max-storage']);
       }
       if (typeof opts['--max-depth'] !== 'undefined') {
-        fsmod.max_depth = opts['--max-depth'];
+        fsmod.max_depth = Number(opts['--max-depth']);
       }
       if (typeof opts['--max-path'] !== 'undefined') {
-        fsmod.max_path = opts['--max-path'];
+        fsmod.max_path = Number(opts['--max-path']);
       }
       try {
         await ses.fsmod(fsno, fsmod);
@@ -351,16 +351,16 @@
         fsadd.name = opts['--name'];
       }
       if (typeof opts['--max-files'] !== 'undefined') {
-        fsadd.max_files = opts['--max-files'];
+        fsadd.max_files = Number(opts['--max-files']);
       }
       if (typeof opts['--max-storage'] !== 'undefined') {
-        fsadd.max_storage = opts['--max-storage'];
+        fsadd.max_storage = Number(opts['--max-storage']);
       }
       if (typeof opts['--max-depth'] !== 'undefined') {
-        fsadd.max_depth = opts['--max-depth'];
+        fsadd.max_depth = Number(opts['--max-depth']);
       }
       if (typeof opts['--max-path'] !== 'undefined') {
-        fsadd.max_path = opts['--max-path'];
+        fsadd.max_path = Number(opts['--max-path']);
       }
       try {
         const result = await ses.fsadd(fsadd);
