@@ -27,7 +27,7 @@
     .term {
       font-family: monospace;
       font-size: 12pt;
-      white-space: pre;
+      white-space: pre-wrap;
     }
   </style>
   <script src="./selfnetfs.js"></script>
@@ -127,9 +127,9 @@
         // when looking at fs. This is something that can be addressed later.
         shell.log(`${ fs.fsno } ${ fs.name }`);
       } else {
-        const opts = argparse(args, ['--union']);
+        const opts = argparse(args, ['--union', '--writeable']);
         if (opts.args.length != 1) {
-          shell.log('fs: usage: fs fsno [--union fsno,fsno,...]');
+          shell.log('fs: usage: fs fsno [--union fsno,fsno,...] [--writeable true/false]');
         }
         if (ses == null) {
           shell.log('fs: not logged in');
@@ -139,6 +139,14 @@
         const fsget = {};
         if (typeof opts['--union'] !== 'undefined') {
           fsget.union = opts['--union'].split(',');
+        }
+        if (typeof opts['--writeable'] !== 'undefined') {
+          if (opts['--writeable'] != 'true' && opts['--writeable'] != 'false') {
+            shell.log('--writeable requires true/false as an argument.');
+            return;
+          } else {
+            fsget.writeable = opts['--writeable'] == 'true';
+          }
         }
         try {
           fs = await ses.fsget(fsno, fsget);
@@ -521,7 +529,7 @@
       shell.log('usermod name [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
       shell.log('userdel name');
       shell.log('userlist');
-      shell.log('fs fsno [--union fsno,fsno,...]');
+      shell.log('fs fsno [--union fsno,fsno,...] [--writeable true/false]');
       shell.log('fsadd --name new_name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
       shell.log('fsmod fsno [--name new_name] [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
       shell.log('fsdel fsno');
