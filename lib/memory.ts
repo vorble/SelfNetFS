@@ -443,14 +443,7 @@ export class SNFSSessionMemory extends SNFSSession {
   }
 }
 
-function pathisdir(path: string) {
-  if (path.length == 0) {
-    return true; // It's /
-  }
-  return path[path.length - 1] == '/';
-}
-
-// File or dir
+// Path is for file or dir.
 function pathnormforfile(path: string) {
   if (path.length == 0) {
     throw new SNFSError('File must have a name.');
@@ -571,7 +564,8 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       throw new SNFSError('max_depth exceeded.');
     }
     let f: SNFSFileMemory = this._files.get(path);
-    if (f == null || !options.truncate) {
+    let truncate = options != null && options.truncate;
+    if (f == null || !truncate) {
       let delta_bytes = 0;
       if (f != null) {
         delta_bytes -= f.data.length;
@@ -642,8 +636,14 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       throw new SNFSError('File not found.');
     }
     this._files.delete(path);
+    this._stored_bytes -= f.data.length;
+    const todel = this._files.get(newpath);
     // This deletes the file at newpath if there is one present.
     this._files.set(newpath, f);
+    if (todel != null) {
+      this._stored_bytes -= todel.data.length;
+    }
+    this._stored_bytes += f.data.length;
     f.name = newpath;
     return Promise.resolve({
     });

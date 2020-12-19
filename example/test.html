@@ -6,15 +6,14 @@
   <script src="./selfnetfs.js"></script>
 </head>
 <body>
-  Please open your developer console to interact with the library.
+  <p>Please open your developer console and use the api, ses, and fs variables to interact with the library.</p>
+  <p>If you're having trouble logging in, try using the <a href="shell.html">shell</a>'s connect command and then refresh this page.</p>
   <script>
     'use strict';
 
     let api = new SNFSHttp();
     let ses = null;
-    let ses2 = null;
     let fs = null;
-    let fs2 = null;
 
     function tenc(text) {
       return new TextEncoder().encode(text);
@@ -27,19 +26,33 @@
     async function main() {
       const pool = localStorage.getItem('pool');
       try {
-        ses = await api.resume('https://selfnetfs-api.home.arpa', pool);
+        ses = await api.resume('https://selfnetfs-api.home.arpa/keith', pool);
         console.log('Successfully resumed session.');
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
-        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa', name: 'keith', password: 'password' });
+        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/keith', name: 'keith', password: 'password' });
         localStorage.setItem('pool', ses.pool);
       }
       fs = await ses.fs();
 
-      /*
-      ses2 = await api.login({ api_root: 'https://selfnetfs-api.home.arpa', name: 'keith', password: 'password' });
-      fs2 = await ses2.fs();
-      */
+      await test();
+    }
+
+    async function test() {
+      const snfs = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
+      await snfs.bootstrap('admin', 'password');
+      const ses = await snfs.login({ name: 'admin', password: 'password' });
+      const fs = await ses.fs();
+
+      await fs.writefile('/test1', tenc('1234567890'));
+      await fs.writefile('/test2', tenc('abcdefghij'));
+      await fs.move('/test1', '/test2');
+      console.log(fs);
+      await fs.writefile('/test1', tenc('1234567890'));
+      await fs.writefile('/test2', tenc('abcdefghij'));
+      await fs.unlink('/test2');
+      await fs.move('/test1', '/test2');
+      console.log(fs);
     }
 
     main().then(() => {
