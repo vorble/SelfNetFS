@@ -72,13 +72,17 @@ function lookupSession(req, res, next) {
   next();
 }
 
-function lookupFileSystem(req, res, next) {
-  const fs = res.locals.session.lookupFileSystem(req.body.fstoken);
-  if (fs == null) {
-    return next(new SNFSError('File system not found.'));
+async function lookupFileSystem(req, res, next) {
+  try {
+    const fs = await res.locals.session.lookupFileSystem(req.body.fstoken);
+    if (fs == null) {
+      throw new SNFSError('File system not found.');
+    }
+    res.locals.fs = fs;
+    next();
+  } catch (err) {
+    next(err);
   }
-  res.locals.fs = fs;
-  next();
 }
 
 const app = express();

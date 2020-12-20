@@ -5,9 +5,16 @@ import {
   SNFSFileSystemGetOptions,
   SNFSSession,
 } from '../lib/snfs';
+import crypto = require('crypto');
 
 const MAX_SESSIONS = 1000;
-const MAX_FSS = 10;
+
+// TODO: Load these from a file, but allow one to be generated
+// to be generated each time the server starts. When refactoring to allow the key pair
+// to be read from files, pull the key loading into the logic for
+const { publicKey: PUBLIC_KEY, privateKey: PRIVATE_KEY } = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 1024,
+});
 
 class FSWithToken {
   fs: SNFSFileSystem;
@@ -18,6 +25,30 @@ class FSWithAccessTime {
   fs: SNFSFileSystem;
   fstoken: string;
   atime: Date; // Last access time
+}
+
+interface DecodedFSToken {
+  fsno: string;
+  options: SNFSFileSystemGetOptions,
+}
+
+function encodeFSToken0(): string {
+  const buffer = crypto.publicEncrypt(PUBLIC_KEY, Buffer.from('='));
+  return buffer.toString('base64');
+}
+function encodeFSToken2(fsno: string, options: SNFSFileSystemGetOptions): string {
+  const fsargs = JSON.stringify({ fsno, options });
+  const buffer = crypto.publicEncrypt(PUBLIC_KEY, Buffer.from(fsargs, 'utf-8'));
+  return buffer.toString('base64');
+}
+function decodeFSToken(fstoken: string): DecodedFSToken {
+  const buffer = crypto.privateDecrypt(PRIVATE_KEY, Buffer.from(fstoken, 'base64'));
+  const fsargs = buffer.toString('utf-8');
+  if (fsargs == '=') {
+    return null;
+  }
+  const { fsno, options } = JSON.parse(fsargs);
+  return { fsno, options };
 }
 
 export class ServerSessionManager {
@@ -70,7 +101,6 @@ export class ServerSession {
   pool: string;
   expires: Date;
   session: SNFSSession;
-  fss: Map<string, FSWithAccessTime>;
 
   constructor(session: SNFSSession) {
     const now = new Date();
@@ -78,59 +108,30 @@ export class ServerSession {
     this.pool = tokengen();
     this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
     this.session = session;
-    this.fss = new Map<string, FSWithAccessTime>();
   }
 
   updateExpires(): void {
     this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
   }
 
-  lookupFileSystem(fstoken: string): SNFSFileSystem {
-    const fswat = this.fss.get(fstoken);
-    if (fswat != null) {
-      fswat.atime = new Date();
-      return fswat.fs;
+  async lookupFileSystem(fstoken: string): Promise<SNFSFileSystem> {
+    const fsargs = decodeFSToken(fstoken);
+    if (fsargs == null) {
+      return await this.session.fs();
     }
-    return null;
+    const { fsno, options } = fsargs;
+    return await this.session.fsget(fsno, options);
   }
 
   async fs(): Promise<FSWithToken> {
-    this.reap();
     const fs = await this.session.fs();
-    const fstoken = tokengen();
-    const atime = new Date();
-    this.fss.set(fstoken, {
-      fs,
-      fstoken,
-      atime,
-    });
+    const fstoken = encodeFSToken0();
     return { fs, fstoken };
   }
 
   async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<FSWithToken> {
-    this.reap();
     const fs = await this.session.fsget(fsno, options);
-    const fstoken = tokengen();
-    const atime = new Date();
-    this.fss.set(fstoken, {
-      fs,
-      fstoken,
-      atime,
-    });
+    const fstoken = encodeFSToken2(fsno, options);
     return { fs, fstoken };
-  }
-
-  reap(): void {
-    if (this.fss.size >= MAX_FSS) {
-      let stale = null;
-      for (const fswat of this.fss.values()) {
-        if (stale == null || fswat.atime < stale.atime) {
-          stale = fswat;
-        }
-      }
-      if (stale != null) {
-        this.fss.delete(stale.fstoken);
-      }
-    }
   }
 }
