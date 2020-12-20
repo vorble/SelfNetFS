@@ -14,7 +14,6 @@ import {
 } from '../lib/snfs';
 import { SNFSPasswordModuleHash } from './password';
 import Persist from './persist';
-import { tokengen } from './token';
 import { ServerSessionManager, ServerSession } from './session';
 
 // TODO: Add options to specify where data should be stored.
