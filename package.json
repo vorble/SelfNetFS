@@ -10,6 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Keith <vorble@cochleoid.com>",
+  "repository": "https://github.com/vorble/selfnetfs",
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.19.0",
