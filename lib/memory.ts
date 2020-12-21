@@ -655,7 +655,9 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
   }
 }
 
-class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
+// TODO: Currently exported so the API can get at the private
+// values to get the original acquire options.
+export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   _fs: SNFSFileSystemMemory;
   _union: SNFSFileSystemMemory[];
   _writeable: boolean;

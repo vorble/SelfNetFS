@@ -5,6 +5,9 @@ import {
   SNFSFileSystemGetOptions,
   SNFSSession,
 } from '../lib/snfs';
+import {
+  SNFSFileSystemMemoryUnion,
+} from '../lib/memory';
 import crypto = require('crypto');
 
 const MAX_SESSIONS = 1000;
@@ -32,11 +35,7 @@ interface DecodedFSToken {
   options: SNFSFileSystemGetOptions,
 }
 
-function encodeFSToken0(): string {
-  const buffer = crypto.publicEncrypt(PUBLIC_KEY, Buffer.from('='));
-  return buffer.toString('base64');
-}
-function encodeFSToken2(fsno: string, options: SNFSFileSystemGetOptions): string {
+function encodeFSToken(fsno: string, options: SNFSFileSystemGetOptions): string {
   const fsargs = JSON.stringify({ fsno, options });
   const buffer = crypto.publicEncrypt(PUBLIC_KEY, Buffer.from(fsargs, 'utf-8'));
   return buffer.toString('base64');
@@ -44,9 +43,6 @@ function encodeFSToken2(fsno: string, options: SNFSFileSystemGetOptions): string
 function decodeFSToken(fstoken: string): DecodedFSToken {
   const buffer = crypto.privateDecrypt(PRIVATE_KEY, Buffer.from(fstoken, 'base64'));
   const fsargs = buffer.toString('utf-8');
-  if (fsargs == '=') {
-    return null;
-  }
   const { fsno, options } = JSON.parse(fsargs);
   return { fsno, options };
 }
@@ -124,14 +120,23 @@ export class ServerSession {
   }
 
   async fs(): Promise<FSWithToken> {
-    const fs = await this.session.fs();
-    const fstoken = encodeFSToken0();
+    // TODO: Implement introspection on SNFSFileSystem to
+    // allow acquiring the original acquiring options.
+    const fs0 = await this.session.fs();
+    const fs1: any = fs0;
+    const fs: SNFSFileSystemMemoryUnion = fs1;
+    const fstoken = encodeFSToken(fs.fsno, {
+      // TODO: Accessing private for lack of introspection on
+      // a FS which would indicate the unioned fs's.
+      writeable: fs._writeable,
+      union: fs._union.map(f => f.fsno),
+    });
     return { fs, fstoken };
   }
 
   async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<FSWithToken> {
     const fs = await this.session.fsget(fsno, options);
-    const fstoken = encodeFSToken2(fsno, options);
+    const fstoken = encodeFSToken(fsno, options);
     return { fs, fstoken };
   }
 }
