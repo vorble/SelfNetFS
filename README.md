@@ -59,7 +59,7 @@ let ses = null;
 let fs = null;
 
 async function startup() {
-  const api_root = localStorage.getItem('snfs_api_root');
+  let api_root = localStorage.getItem('snfs_api_root');
   const pool = localStorage.getItem('pool');
   if (api_root != null && pool != null) {
     try {
@@ -75,7 +75,7 @@ async function startup() {
     }
   }
   try {
-    cosnt api_root = 'https://selfnetfs-api.home.arpa/keith';
+    api_root = 'https://selfnetfs-api.home.arpa/keith';
     ses = api.login({
       api_root,
       name: 'guest',
