@@ -122,17 +122,17 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  async usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'usermod'), {
-      name,
+      userno,
       options,
     });
     return result;
   }
 
-  async userdel(name: string): Promise<SNFSUserDel> {
+  async userdel(userno: string): Promise<SNFSUserDel> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'userdel'), {
-      name,
+      userno,
     });
     return result;
   }

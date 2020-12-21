@@ -47,6 +47,7 @@ export class SNFSPasswordModuleNull extends SNFSPasswordModule {
 
 function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
   return {
+    userno: user.userno,
     name: user.name,
     admin: user.admin,
     fs: user.fs == null ? null : {
@@ -133,6 +134,7 @@ export class SNFSMemory extends SNFS {
     }
     const fs = new SNFSFileSystemMemory('default', this._uuidgen(), LIMITS, this._uuidgen);
     const user = {
+      userno: this._uuidgen(),
       name: name,
       admin: true,
       password: this._password_module.hash(password),
@@ -234,6 +236,7 @@ export class SNFSSessionMemory extends SNFSSession {
       admin = options.admin;
     }
     const user = {
+      userno: this._snfs._uuidgen(),
       name: options.name,
       admin: admin,
       password: this._snfs._password_module.hash(options.password),
@@ -244,19 +247,19 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(userRecordToUserInfo(user));
   }
 
-  usermod(name: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
     if (this._logged_in_user == null) {
       throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    const user = this._snfs._users.find(u => u.name == name);
+    const user = this._snfs._users.find(u => u.userno == userno);
     if (user == null) {
       throw new SNFSError('User not found.');
     }
     const new_user = { ...user };
-    if (typeof options.name !== 'undefined' && options.name != name) {
+    if (typeof options.name !== 'undefined' && options.name != user.name) {
       const existing = this._snfs._users.find(u => u.name == options.name);
       if (existing != null) {
         throw new SNFSError('User already exists.');
@@ -291,7 +294,7 @@ export class SNFSSessionMemory extends SNFSSession {
       }
       new_user.union = union;
     }
-    this._snfs._users = this._snfs._users.filter(u => u.name != name);
+    this._snfs._users = this._snfs._users.filter(u => u.userno != userno);
     this._snfs._users.push(new_user);
     if (user == this._logged_in_user) {
       this._logged_in_user = new_user;
@@ -299,21 +302,21 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
-  userdel(name: string): Promise<SNFSUserDel> {
+  userdel(userno: string): Promise<SNFSUserDel> {
     if (this._logged_in_user == null) {
       throw new SNFSError('Not logged in.');
     }
     if (!this._logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    if (this._logged_in_user.name == name) {
+    if (this._logged_in_user.userno == userno) {
       throw new SNFSError('Cannot delete logged in user.');
     }
-    const user = this._snfs._users.find(u => u.name == name);
+    const user = this._snfs._users.find(u => u.userno == userno);
     if (user == null) {
       throw new SNFSError('User not found.');
     }
-    this._snfs._users = this._snfs._users.filter(u => u.name != name);
+    this._snfs._users = this._snfs._users.filter(u => u.userno != userno);
     return Promise.resolve({});
   }
 
@@ -822,6 +825,7 @@ export interface SNFSAuthCredentialsMemory extends SNFSAuthCredentials {
 }
 
 export interface UserRecord {
+  userno: string;
   name: string;
   password: string;
   admin: boolean;

@@ -206,14 +206,14 @@
     commands.set('usermod', async (...args) => {
       const opts = argparse(args, ['--name', '--password', '--admin', '--fs', '--union']);
       if (opts.args.length != 1) {
-        shell.log('usermod: usage: usermod name [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
+        shell.log('usermod: usage: usermod userno [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
         return;
       }
       if (ses == null) {
         shell.log('usermod: not logged in');
         return;
       }
-      const name = opts.args[0];
+      const userno = opts.args[0];
       const usermod = {};
       if (typeof opts['--name'] !== 'undefined') {
         usermod.name = opts['--name'];
@@ -240,7 +240,7 @@
         usermod.union = opts['--union'].split(',');
       }
       try {
-        await ses.usermod(name, usermod);
+        await ses.usermod(userno, usermod);
         shell.log('Ok');
       } catch(err) {
         handleErr(err);
@@ -250,7 +250,7 @@
 
     commands.set('userdel', async (...args) => {
       if (args.length != 1) {
-        shell.log('userdel: usage: userdel name');
+        shell.log('userdel: usage: userdel userno');
         return;
       }
       if (ses == null) {
@@ -278,7 +278,7 @@
       try {
         const users = await ses.userlist();
         for (const user of users) {
-          shell.log(`${ user.name } ${ (user.fs || []).fsno || null } ${ JSON.stringify(user.union.map(u => u.fsno)) }`);
+          shell.log(`${ user.userno } ${ user.name }: ${ (user.fs || []).fsno || null } ${ JSON.stringify(user.union.map(u => u.fsno)) }`);
         }
         shell.log(`${ users.length } user(s)`);
       } catch(err) {
@@ -347,7 +347,7 @@
     commands.set('fsadd', async (...args) => {
       const opts = argparse(args, ['--name', '--max-files', '--max-storage', '--max-depth', '--max-path']);
       if (opts.args.length != 0 || typeof opts['--name'] === 'undefined') {
-        shell.log('fsadd: usage: fsadd --name new_name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
+        shell.log('fsadd: usage: fsadd --name name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
         return;
       }
       if (ses == null) {
@@ -526,8 +526,8 @@
     commands.set('help', async (...args) => {
       shell.log('connect api_root user password');
       shell.log('useradd [--name name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
-      shell.log('usermod name [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
-      shell.log('userdel name');
+      shell.log('usermod userno [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
+      shell.log('userdel userno');
       shell.log('userlist');
       shell.log('fs fsno [--union fsno,fsno,...] [--writeable true/false]');
       shell.log('fsadd --name new_name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');

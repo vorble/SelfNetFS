@@ -135,6 +135,7 @@ function loadSNFSFileMemory(file: any): SNFSFileMemory {
 }
 
 interface UserRecordDump {
+  userno: string;
   name: string;
   password: string;
   admin: boolean;
@@ -143,6 +144,7 @@ interface UserRecordDump {
 }
 function dumpUserRecord(user: UserRecord): UserRecordDump {
   return {
+    userno: user.userno,
     name: user.name,
     password: user.password,
     admin: user.admin,
@@ -159,6 +161,7 @@ function loadUserRecord(user: any, snfs: SNFSMemory): UserRecord {
     return fs;
   }
   return {
+    userno: user.userno,
     name: user.name,
     password: user.password,
     admin: user.admin,

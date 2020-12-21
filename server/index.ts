@@ -183,8 +183,8 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
   try {
     const session: ServerSession = res.locals.session;
     const finish = res.locals.finish;
-    const { name, options } = req.body;
-    finish(await session.session.usermod(name, options));
+    const { userno, options } = req.body;
+    finish(await session.session.usermod(userno, options));
   } catch (err) {
     next(err);
   }
@@ -195,8 +195,8 @@ app.post('/:owner/:pool/userdel', lookupOwner, lookupSession, async (req, res, n
   try {
     const session: ServerSession = res.locals.session;
     const finish = res.locals.finish;
-    const { name } = req.body;
-    finish(await session.session.userdel(name));
+    const { userno } = req.body;
+    finish(await session.session.userdel(userno));
   } catch (err) {
     next(err);
   }
