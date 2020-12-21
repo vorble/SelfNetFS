@@ -145,6 +145,19 @@ export class SNFSMemory extends SNFS {
     this._users.push(user);
   }
 
+  // TODO: Since the web server is state-less (doesn't remember sessions) it needs a
+  // way to re-acquire an SNFSSession instances for already logged in users. I'm not
+  // a fan of having this method to bypass login since it requires more thought around
+  // the usage points that I would like. Maybe session and fs tokens needs to be part
+  // of the base library components.
+  _bypass(userno: string): SNFSSessionMemory {
+    const user = this._users.find(u => u.userno === userno);
+    if (user == null) {
+      throw new SNFSError('User not found.');
+    }
+    return new SNFSSessionMemory(this, user);
+  }
+
   login(options: SNFSAuthCredentialsMemory): Promise<SNFSSession> {
     let reject = false;
     let user = null;

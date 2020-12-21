@@ -1,5 +1,6 @@
 import { tokengen } from './token';
 import {
+  SNFS,
   SNFSError,
   SNFSFileSystem,
   SNFSFileSystemGetOptions,
@@ -7,23 +8,20 @@ import {
 } from '../lib/snfs';
 import {
   SNFSFileSystemMemoryUnion,
+  SNFSMemory,
+  SNFSSessionMemory,
 } from '../lib/memory';
 import crypto = require('crypto');
-import jwt = require('jsonwebtoken')
+import jwt = require('jsonwebtoken');
 
 const MAX_SESSIONS = 1000;
-// TODO: Load this from a file, but allow one to be generated on each run.
+// TODO: Load these from a file, but allow one to be generated on each run.
+const SESTOKEN_SECRET = crypto.randomBytes(32);
 const FSTOKEN_SECRET = crypto.randomBytes(32);
 
 class FSWithToken {
   fs: SNFSFileSystem;
   fstoken: string;
-}
-
-class FSWithAccessTime {
-  fs: SNFSFileSystem;
-  fstoken: string;
-  atime: Date; // Last access time
 }
 
 interface DecodedFSToken {
@@ -42,66 +40,57 @@ function decodeFSToken(fstoken: string): DecodedFSToken {
 }
 
 export class ServerSessionManager {
-  _sessions: Map<string, ServerSession>;
-
-  constructor() {
-    this._sessions = new Map<string, ServerSession>();
-  }
-
   create(ses: SNFSSession): ServerSession {
-    this.reap();
-    if (this._sessions.size >= MAX_SESSIONS) {
-      throw new SNFSError('Too many open sessions.');
-    }
-    const session = new ServerSession(ses);
-    this._sessions.set(session.token, session);
+    const session = new ServerSession();
+    session._create(ses);
     return session;
   }
 
-  lookup(token: string): ServerSession {
-    this.reap();
-    return this._sessions.get(token);
-  }
-
-  logout(token: string): ServerSession {
-    this.reap();
-    const session = this._sessions.get(token);
-    this._sessions.delete(token);
+  lookup(snfs: SNFS, pool: string, token: string): ServerSession {
+    const session = new ServerSession();
+    session._lookup(snfs, pool, token);
     return session;
-  }
-
-  reap(): void {
-    // TODO: Denial of service vector here. An attacker could
-    // open up a bunch of sessions to make reap() take a long
-    // time. Solution might be to limit number of sessions
-    // available to one user group and/or use a better
-    // storage mechanism to allow for quicker lookup based on
-    // expires time.
-    const now = new Date();
-    for (const session of this._sessions.values()) {
-      if (now > session.expires) {
-        this._sessions.delete(session.token);
-      }
-    }
   }
 }
 
 export class ServerSession {
-  token: string; // Secret data.
+  token: string; // JWT encoded data.
   pool: string;
+  userno: string;
   expires: Date;
   session: SNFSSession;
 
-  constructor(session: SNFSSession) {
-    const now = new Date();
-    this.token = tokengen();
+  _create(session: SNFSSession): void {
+    // TODO: Need introspection methods to get at the current logged in user's info.
+    const session0: any = session;
+    const session1: SNFSSessionMemory = session0;
+    const userno = session1._logged_in_user.userno;
+    const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
+    this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'HS256' });
     this.pool = tokengen();
-    this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
+    this.userno = userno;
+    this.expires = expires;
     this.session = session;
   }
 
+  _lookup(snfs: SNFS, pool: string, token: string): void { // TODO: What to return?
+    const sesargs = jwt.verify(token, SESTOKEN_SECRET, { algorithms: ['HS256'] });
+    const { userno } = sesargs;
+    // TODO: Bypasses type system.
+    const snfs0: any = snfs;
+    const snfs1: SNFSMemory = snfs0;
+    this.token = token;
+    this.pool = pool;
+    this.userno = userno;
+    this.expires = null;
+    this.session = snfs1._bypass(userno);
+  }
+
   updateExpires(): void {
-    this.expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
+    const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
+    const userno = this.userno;
+    this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'HS256' });
+    this.expires = expires;
   }
 
   async lookupFileSystem(fstoken: string): Promise<SNFSFileSystem> {

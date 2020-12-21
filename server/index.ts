@@ -63,13 +63,19 @@ function lookupOwner(req, res, next) {
 }
 
 function lookupSession(req, res, next) {
-  const { pool } = req.params;
-  const session = sessions.lookup(req.cookies[pool]);
-  if (session == null) {
-    return next(new SNFSError('Expired.'));
+  try {
+    const { pool } = req.params;
+    // TODO: this may throw on expired token, need to catch and detect the
+    // right error and respond with SNFSError.
+    const session = sessions.lookup(res.locals.snfs, pool, req.cookies[pool]);
+    if (session == null) {
+      return next(new SNFSError('Expired.'));
+    }
+    res.locals.session = session;
+    next();
+  } catch (err) {
+    next(err);
   }
-  res.locals.session = session;
-  next();
 }
 
 async function lookupFileSystem(req, res, next) {
@@ -129,11 +135,7 @@ app.options('/:owner/:pool/logout', (req, res) => { res.end(); });
 app.post('/:owner/:pool/logout', lookupOwner, async (req, res, next) => {
   try {
     const finish = res.locals.finish;
-    const session = sessions.logout(req.cookies.token);
-    if (session == null) {
-      throw new SNFSError('Expired.');
-    }
-    res.clearCookie(session.pool, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
+    res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'None', secure: true, maxAge: 0 });
     finish({});
   } catch (err) {
     next(err);
