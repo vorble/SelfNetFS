@@ -9,15 +9,11 @@ import {
   SNFSFileSystemMemoryUnion,
 } from '../lib/memory';
 import crypto = require('crypto');
+import jwt = require('jsonwebtoken')
 
 const MAX_SESSIONS = 1000;
-
-// TODO: Load these from a file, but allow one to be generated
-// to be generated each time the server starts. When refactoring to allow the key pair
-// to be read from files, pull the key loading into the logic for
-const { publicKey: PUBLIC_KEY, privateKey: PRIVATE_KEY } = crypto.generateKeyPairSync('rsa', {
-  modulusLength: 1024,
-});
+// TODO: Load this from a file, but allow one to be generated on each run.
+const FSTOKEN_SECRET = crypto.randomBytes(32);
 
 class FSWithToken {
   fs: SNFSFileSystem;
@@ -36,14 +32,12 @@ interface DecodedFSToken {
 }
 
 function encodeFSToken(fsno: string, options: SNFSFileSystemGetOptions): string {
-  const fsargs = JSON.stringify({ fsno, options });
-  const buffer = crypto.publicEncrypt(PUBLIC_KEY, Buffer.from(fsargs, 'utf-8'));
-  return buffer.toString('base64');
+  // Note: no expiry, only interested is the ability to verify the payload.
+  return jwt.sign({ fsno, options }, FSTOKEN_SECRET, { algorithm: 'HS256' });
 }
 function decodeFSToken(fstoken: string): DecodedFSToken {
-  const buffer = crypto.privateDecrypt(PRIVATE_KEY, Buffer.from(fstoken, 'base64'));
-  const fsargs = buffer.toString('utf-8');
-  const { fsno, options } = JSON.parse(fsargs);
+  const fsargs = jwt.verify(fstoken, FSTOKEN_SECRET, { algorithms: ['HS256'] });
+  const { fsno, options } = fsargs;
   return { fsno, options };
 }
 
@@ -112,9 +106,6 @@ export class ServerSession {
 
   async lookupFileSystem(fstoken: string): Promise<SNFSFileSystem> {
     const fsargs = decodeFSToken(fstoken);
-    if (fsargs == null) {
-      return await this.session.fs();
-    }
     const { fsno, options } = fsargs;
     return await this.session.fsget(fsno, options);
   }
