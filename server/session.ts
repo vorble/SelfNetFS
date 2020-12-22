@@ -64,7 +64,7 @@ export class ServerSession {
     // TODO: Need introspection methods to get at the current logged in user's info.
     const session0: any = session;
     const session1: SNFSSessionMemory = session0;
-    const userno = session1._logged_in_user.userno;
+    const userno = session1._logged_in_userno;
     const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
     this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'HS256' });
     this.pool = tokengen();

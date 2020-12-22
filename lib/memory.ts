@@ -158,6 +158,10 @@ export class SNFSMemory extends SNFS {
     return new SNFSSessionMemory(this, user);
   }
 
+  _lookup_user(userno: string): UserRecord {
+    return this._users.find(u => u.userno == userno);
+  }
+
   login(options: SNFSAuthCredentialsMemory): Promise<SNFSSession> {
     let reject = false;
     let user = null;
@@ -181,37 +185,44 @@ export class SNFSMemory extends SNFS {
 
 export class SNFSSessionMemory extends SNFSSession {
   _snfs: SNFSMemory;
-  _logged_in_user: UserRecord;
+  _logged_in_userno: string;
 
   constructor(snfs: SNFSMemory, user: UserRecord) {
     super();
 
     this._snfs = snfs;
-    this._logged_in_user = user;
+    this._logged_in_userno = user.userno;
+  }
+
+  _lookup_user(): UserRecord {
+    if (this._logged_in_userno == null) {
+      throw new SNFSError('Not logged in.');
+    }
+    const logged_in_user = this._snfs._lookup_user(this._logged_in_userno);
+    if (logged_in_user == null) {
+      throw new SNFSError('User not found.');
+    }
+    return logged_in_user;
   }
 
   logout(): Promise<SNFSLogout> {
-    this._logged_in_user = null;
+    this._logged_in_userno = null;
     return Promise.resolve({});
   }
 
   fs(): Promise<SNFSFileSystem> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    const fs = this._logged_in_user.fs;
+    const logged_in_user = this._lookup_user();
+    const fs = logged_in_user.fs;
     if (fs == null) {
       throw new SNFSError('User has no FS.');
     }
     const writeable = true; // File system is writeable by virtue of being assigned the the user.
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, this._logged_in_user.union, writeable, this._snfs._uuidgen));
+    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
   useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
     if (typeof options.name === 'undefined') {
@@ -261,10 +272,8 @@ export class SNFSSessionMemory extends SNFSSession {
   }
 
   usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
     const user = this._snfs._users.find(u => u.userno == userno);
@@ -309,20 +318,15 @@ export class SNFSSessionMemory extends SNFSSession {
     }
     this._snfs._users = this._snfs._users.filter(u => u.userno != userno);
     this._snfs._users.push(new_user);
-    if (user == this._logged_in_user) {
-      this._logged_in_user = new_user;
-    }
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
   userdel(userno: string): Promise<SNFSUserDel> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    if (this._logged_in_user.userno == userno) {
+    if (logged_in_user.userno == userno) {
       throw new SNFSError('Cannot delete logged in user.');
     }
     const user = this._snfs._users.find(u => u.userno == userno);
@@ -334,21 +338,17 @@ export class SNFSSessionMemory extends SNFSSession {
   }
 
   userlist(): Promise<SNFSUserInfo[]> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._users.map(userRecordToUserInfo));
     } else {
-      return Promise.resolve([userRecordToUserInfo(this._logged_in_user)]);
+      return Promise.resolve([userRecordToUserInfo(logged_in_user)]);
     }
   }
 
   fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
     if (typeof options.name == 'undefined') {
@@ -364,10 +364,8 @@ export class SNFSSessionMemory extends SNFSSession {
   }
 
   fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
     const fs = this._snfs._fss.find(f => f.fsno == fsno);
@@ -386,10 +384,8 @@ export class SNFSSessionMemory extends SNFSSession {
   }
 
   fsdel(fsno: string): Promise<SNFSFileSystemDel> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
     for (const user of this._snfs._users) {
@@ -409,15 +405,13 @@ export class SNFSSessionMemory extends SNFSSession {
   }
 
   fslist(): Promise<SNFSFileSystemInfo[]> {
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._fss.map(fileSystemToInfo));
     } else {
       return Promise.resolve([
-        this._logged_in_user.fs, // May be null, hence filter
-        ...this._logged_in_user.union,
+        logged_in_user.fs, // May be null, hence filter
+        ...logged_in_user.union,
       ].filter(x => !!x).map(fileSystemToInfo));
     }
   }
@@ -430,18 +424,16 @@ export class SNFSSessionMemory extends SNFSSession {
     if (typeof options.writeable == 'undefined') {
       options.writeable = true;
     }
-    if (this._logged_in_user == null) {
-      throw new SNFSError('Not logged in.');
-    }
-    if (!this._logged_in_user.admin) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
       const fsnos = [fsno, ...options.union];
       for (const fsno of fsnos) {
-        if (fsno != (this._logged_in_user.fs || {}).fsno
-            && null == this._logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
+        if (fsno != (logged_in_user.fs || {}).fsno
+            && null == logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
             throw new SNFSError('Not authorized.');
         }
       }
-      if (null != this._logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
+      if (null != logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
         options.writeable = false;
       }
     }
@@ -460,7 +452,7 @@ export class SNFSSessionMemory extends SNFSSession {
     if (union.length == 0 && options.writeable) {
       return Promise.resolve(fs);
     }
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen));
+    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 }
 
@@ -677,16 +669,45 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   _fs: SNFSFileSystemMemory;
   _union: SNFSFileSystemMemory[];
   _writeable: boolean;
+  _userno: string;
+  _snfs: SNFSMemory;
 
-  constructor(fs: SNFSFileSystemMemory, union: SNFSFileSystemMemory[], writeable: boolean, uuidgen: () => string) {
+  constructor(fs: SNFSFileSystemMemory, union: SNFSFileSystemMemory[], writeable: boolean, uuidgen: () => string, user: UserRecord, snfs: SNFSMemory) {
     super(fs.name, fs.fsno, fs.limits, uuidgen);
 
     this._fs = fs;
     this._union = union.slice();
     this._writeable = writeable;
+    this._userno = user.userno;
+    this._snfs = snfs;
+  }
+
+  _lookup_user(): UserRecord {
+    if (this._userno == null) {
+      throw new SNFSError('Not logged in.');
+    }
+    const user = this._snfs._lookup_user(this._userno);
+    if (user == null) {
+      throw new SNFSError('User not found.');
+    }
+    return user;
+  }
+
+  _check_access(): void {
+    const user = this._lookup_user();
+    if (user.fs.fsno != this._fs.fsno) {
+      throw new SNFSError('Access denied.');
+    }
+    for (const fs of this._union) {
+      const it = user.union.find(ufs => ufs.fsno == fs.fsno);
+      if (it == null) {
+        throw new SNFSError('Access denied.');
+      }
+    }
   }
 
   async readdir(path: string): Promise<SNFSReadDir[]> {
+    this._check_access();
     const result = await this._fs.readdir(path);
     if (!this._writeable) {
       for (const f of result) {
@@ -714,6 +735,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 
   async stat(path: string): Promise<SNFSStat> {
+    this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {
       try {
@@ -735,6 +757,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 
   async writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+    this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
@@ -742,6 +765,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 
   async readfile(path: string): Promise<SNFSReadFile> {
+    this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {
       try {
@@ -758,6 +782,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 
   async unlink(path: string): Promise<SNFSUnlink> {
+    this._check_access();
     // It would be nice if this happened only if the file exists.
     // Could do it by doing stat() first, but it's not time to
     // make everything perfect yet.
@@ -796,6 +821,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 
   async move(path: string, newpath: string): Promise<SNFSMove> {
+    this._check_access();
     // It would be nice if this happened only if the file exists.
     // Could do it by doing stat() first, but it's not time to
     // make everything perfect yet.
