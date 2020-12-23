@@ -92,7 +92,6 @@
       };
     }
 
-    // TODO: Reorganize command handlers to match the ordering in the programming interface.
     const commands = new Map(); // [string, async (...args) => {}]
 
     commands.set('connect', async (...args) => {
@@ -287,21 +286,35 @@
       }
     });
 
-    commands.set('fslist', async (...args) => {
-      if (args.length != 0) {
-        shell.log('fslist: usage: fslist');
+    commands.set('fsadd', async (...args) => {
+      const opts = argparse(args, ['--name', '--max-files', '--max-storage', '--max-depth', '--max-path']);
+      if (opts.args.length != 0 || typeof opts['--name'] === 'undefined') {
+        shell.log('fsadd: usage: fsadd --name name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
         return;
       }
       if (ses == null) {
-        shell.log('fslist: not logged in');
+        shell.log('fsadd: not logged in');
         return;
       }
+      const fsadd = {};
+      if (typeof opts['--name'] !== 'undefined') {
+        fsadd.name = opts['--name'];
+      }
+      if (typeof opts['--max-files'] !== 'undefined') {
+        fsadd.max_files = Number(opts['--max-files']);
+      }
+      if (typeof opts['--max-storage'] !== 'undefined') {
+        fsadd.max_storage = Number(opts['--max-storage']);
+      }
+      if (typeof opts['--max-depth'] !== 'undefined') {
+        fsadd.max_depth = Number(opts['--max-depth']);
+      }
+      if (typeof opts['--max-path'] !== 'undefined') {
+        fsadd.max_path = Number(opts['--max-path']);
+      }
       try {
-        const fss = await ses.fslist();
-        for (const fs of fss) {
-          shell.log(`${ fs.fsno } ${ fs.name }`);
-        }
-        shell.log(`${ fss.length } file system(s)`);
+        const result = await ses.fsadd(fsadd);
+        shell.log(`${ result.fsno } ${ result.name }`);
       } catch(err) {
         handleErr(err);
         return;
@@ -344,41 +357,6 @@
       }
     });
 
-    commands.set('fsadd', async (...args) => {
-      const opts = argparse(args, ['--name', '--max-files', '--max-storage', '--max-depth', '--max-path']);
-      if (opts.args.length != 0 || typeof opts['--name'] === 'undefined') {
-        shell.log('fsadd: usage: fsadd --name name [--max-files max_files] [--max-storage max_storage] [--max-depth max_depth] [--max-path max_path]');
-        return;
-      }
-      if (ses == null) {
-        shell.log('fsadd: not logged in');
-        return;
-      }
-      const fsadd = {};
-      if (typeof opts['--name'] !== 'undefined') {
-        fsadd.name = opts['--name'];
-      }
-      if (typeof opts['--max-files'] !== 'undefined') {
-        fsadd.max_files = Number(opts['--max-files']);
-      }
-      if (typeof opts['--max-storage'] !== 'undefined') {
-        fsadd.max_storage = Number(opts['--max-storage']);
-      }
-      if (typeof opts['--max-depth'] !== 'undefined') {
-        fsadd.max_depth = Number(opts['--max-depth']);
-      }
-      if (typeof opts['--max-path'] !== 'undefined') {
-        fsadd.max_path = Number(opts['--max-path']);
-      }
-      try {
-        const result = await ses.fsadd(fsadd);
-        shell.log(`${ result.fsno } ${ result.name }`);
-      } catch(err) {
-        handleErr(err);
-        return;
-      }
-    });
-
     commands.set('fsdel', async (...args) => {
       if (args.length != 1) {
         shell.log('fsdel: usage: fsdel fsno');
@@ -392,6 +370,27 @@
         await ses.fsdel(args[0]);
         shell.log(`delted`);
       } catch (err) {
+        handleErr(err);
+        return;
+      }
+    });
+
+    commands.set('fslist', async (...args) => {
+      if (args.length != 0) {
+        shell.log('fslist: usage: fslist');
+        return;
+      }
+      if (ses == null) {
+        shell.log('fslist: not logged in');
+        return;
+      }
+      try {
+        const fss = await ses.fslist();
+        for (const fs of fss) {
+          shell.log(`${ fs.fsno } ${ fs.name }`);
+        }
+        shell.log(`${ fss.length } file system(s)`);
+      } catch(err) {
         handleErr(err);
         return;
       }
@@ -550,7 +549,6 @@
         window.scrollTo(0, document.body.scrollHeight);
       },
       exec: (command) => {
-        // TODO: Probably will need to handle quotes and significant whitespaces.
         const parts = command.split(/\s+/g);
         if (parts.length == 0 || parts[0].length == 0) {
           return;
@@ -566,8 +564,6 @@
 
     $readline.onkeydown = (e) => {
       // console.log(e);
-      // TODO: It would be nice to be able to press up/down
-      // to go back/forth in the history.
       if (e.key == 'Enter') {
         const command = e.target.value;
         shell.log($prompt.innerText + command);

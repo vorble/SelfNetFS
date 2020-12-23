@@ -13,11 +13,34 @@ import {
 } from '../lib/memory';
 import crypto = require('crypto');
 import jwt = require('jsonwebtoken');
+import fs = require('fs');
 
-const MAX_SESSIONS = 1000;
-// TODO: Load these from a file, but allow one to be generated on each run.
-const SESTOKEN_SECRET = crypto.randomBytes(32);
-const FSTOKEN_SECRET = crypto.randomBytes(32);
+function loadSessionTokenSecret() {
+  try {
+    return fs.readFileSync('./sestoken.pem');
+  } catch (err) {
+    if (err.code == 'ENOENT') {
+      console.log('Session Token Secret: Fallback to randomly generated value.');
+      return crypto.randomBytes(32);
+    }
+    throw err;
+  }
+}
+
+function loadFSTokenSecret() {
+  try {
+    return fs.readFileSync('./fstoken.pem');
+  } catch (err) {
+    if (err.code == 'ENOENT') {
+      console.log('FS Token Secret: Fallback to randomly generated value.');
+      return crypto.randomBytes(32);
+    }
+    throw err;
+  }
+}
+
+const SESTOKEN_SECRET = loadSessionTokenSecret();
+const FSTOKEN_SECRET = loadFSTokenSecret();
 
 class FSWithToken {
   fs: SNFSFileSystem;
@@ -30,13 +53,20 @@ interface DecodedFSToken {
 }
 
 function encodeFSToken(fsno: string, options: SNFSFileSystemGetOptions): string {
-  // Note: no expiry, only interested is the ability to verify the payload.
+  // Note: no expiry, only interested is the ability to verify the payload signature.
   return jwt.sign({ fsno, options }, FSTOKEN_SECRET, { algorithm: 'HS256' });
 }
 function decodeFSToken(fstoken: string): DecodedFSToken {
-  const fsargs = jwt.verify(fstoken, FSTOKEN_SECRET, { algorithms: ['HS256'] });
-  const { fsno, options } = fsargs;
-  return { fsno, options };
+  try {
+    const fsargs = jwt.verify(fstoken, FSTOKEN_SECRET, { algorithms: ['HS256'] });
+    const { fsno, options } = fsargs;
+    return { fsno, options };
+  } catch (err) {
+    if (err instanceof jwt.JsonWebTokenError) {
+      throw new SNFSError('Expired.');
+    }
+    throw err;
+  }
 }
 
 export class ServerSessionManager {
@@ -66,30 +96,37 @@ export class ServerSession {
     const session1: SNFSSessionMemory = session0;
     const userno = session1._logged_in_userno;
     const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
-    this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'HS256' });
+    this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'ES256' });
     this.pool = tokengen();
     this.userno = userno;
     this.expires = expires;
     this.session = session;
   }
 
-  _lookup(snfs: SNFS, pool: string, token: string): void { // TODO: What to return?
-    const sesargs = jwt.verify(token, SESTOKEN_SECRET, { algorithms: ['HS256'] });
-    const { userno } = sesargs;
-    // TODO: Bypasses type system.
-    const snfs0: any = snfs;
-    const snfs1: SNFSMemory = snfs0;
-    this.token = token;
-    this.pool = pool;
-    this.userno = userno;
-    this.expires = null;
-    this.session = snfs1._bypass(userno);
+  _lookup(snfs: SNFS, pool: string, token: string): void {
+    try {
+      const sesargs = jwt.verify(token, SESTOKEN_SECRET, { algorithms: ['ES256'] });
+      const { userno } = sesargs;
+      // TODO: Bypasses type system.
+      const snfs0: any = snfs;
+      const snfs1: SNFSMemory = snfs0;
+      this.token = token;
+      this.pool = pool;
+      this.userno = userno;
+      this.expires = null;
+      this.session = snfs1._bypass(userno);
+    } catch (err) {
+      if (err instanceof jwt.JsonWebTokenError) {
+        throw new SNFSError('Expired.');
+      }
+      throw err;
+    }
   }
 
   updateExpires(): void {
     const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
     const userno = this.userno;
-    this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'HS256' });
+    this.token = jwt.sign({ userno, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'ES256' });
     this.expires = expires;
   }
 

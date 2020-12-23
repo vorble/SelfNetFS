@@ -126,3 +126,13 @@ web servers and familiar with NodeJS.
 * Navigate your browser to `https://selfnetfs-ui.home.arpa/shell.html` or
   `https://selfnetfs-ui.home.arpa/test.html`.
 * In the shell, the command `help` lists the available commands.
+
+## Notes
+
+The following are notes to be integrated into a better setup
+guide:
+
+```
+openssl ecparam -name secp256k1 -genkey -noout -out sestoken.pem
+openssl ecparam -name secp256k1 -genkey -noout -out fstoken.pem
+```

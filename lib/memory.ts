@@ -740,7 +740,6 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     for (const fs of [this._fs, ...this._union]) {
       try {
         const result = await fs.stat(path);
-        // TODO: Not my favorite code, using errors as a counter.
         if (errors.length > 0 || !this._writeable) {
           result.writeable = false;
         }
@@ -863,6 +862,7 @@ export interface SNFSAuthCredentialsMemory extends SNFSAuthCredentials {
   password: string;
 }
 
+// TODO: Don't want to export this.
 export interface UserRecord {
   userno: string;
   name: string;
@@ -872,6 +872,7 @@ export interface UserRecord {
   union: SNFSFileSystemMemory[];
 }
 
+// TODO: Don't want to export this.
 export class SNFSFileMemory {
   name: string;
   ino: string;

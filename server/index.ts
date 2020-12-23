@@ -16,8 +16,7 @@ import { SNFSPasswordModuleHash } from './password';
 import Persist from './persist';
 import { ServerSessionManager, ServerSession } from './session';
 
-// TODO: Add options to specify where data should be stored.
-const persist = new Persist();
+const persist = new Persist('./database');
 const sessions = new ServerSessionManager();
 const owners = new Map<string, SNFSMemory>();
 const null_owner = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
@@ -65,12 +64,7 @@ function lookupOwner(req, res, next) {
 function lookupSession(req, res, next) {
   try {
     const { pool } = req.params;
-    // TODO: this may throw on expired token, need to catch and detect the
-    // right error and respond with SNFSError.
     const session = sessions.lookup(res.locals.snfs, pool, req.cookies[pool]);
-    if (session == null) {
-      return next(new SNFSError('Expired.'));
-    }
     res.locals.session = session;
     next();
   } catch (err) {
@@ -81,9 +75,6 @@ function lookupSession(req, res, next) {
 async function lookupFileSystem(req, res, next) {
   try {
     const fs = await res.locals.session.lookupFileSystem(req.body.fstoken);
-    if (fs == null) {
-      throw new SNFSError('File system not found.');
-    }
     res.locals.fs = fs;
     next();
   } catch (err) {
@@ -98,22 +89,28 @@ app.use(cookieParser());
 app.use(bodyParser.json());
 
 app.use((req, res, next) => {
+  // If origin on the request is missing, then * is used which will cause the browser
+  // to complain and reject the response.
   const origin = req.headers.origin || '*';
   res.header('Access-Control-Allow-Origin', origin);
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
 app.use((req, res, next) => {
-  // TODO: Check what the browser says they'll accept, must be application/json
-  if (typeof req.body != 'object') {
-    return res.status(400).send({ message: 'Invalid request: missing request body.' });
+  if (req.method === 'POST') {
+    if (req.headers.accept !== 'application/json') {
+      return res.status(400).send({ message: 'Accept header must be application/json.' });
+    }
+    if (typeof req.body !== 'object') {
+      return res.status(400).send({ message: 'Invalid request: missing request body.' });
+    }
+    res.locals.finish = (response) => {
+      persist.save(req.params.owner, res.locals.snfs);
+      return res.status(200).send(response == null ? {} : response);
+    };
   }
-  res.locals.finish = (response) => {
-    persist.save(req.params.owner, res.locals.snfs);
-    return res.status(200).send(response == null ? {} : response);
-  };
   next();
 });
 
@@ -324,11 +321,9 @@ app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem,
     const finish = res.locals.finish;
     const { path } = req.body;
     const result = await fs.readfile(path);
-    // TODO: Typescript isn't happy because Uint8Array toString() method doesn't take an argument.
-    const facade: any = result.data;
     finish({
       ...result,
-      data: facade.toString('base64'),
+      data: Buffer.from(result.data).toString('base64'),
     });
   } catch(err) {
     next(err);

@@ -1,4 +1,5 @@
 import fs = require('fs');
+import path = require('path');
 
 import {
   SNFSError,
@@ -12,15 +13,21 @@ import {
 } from '../lib/memory';
 
 export default class Persist {
+  _database_dir: string;
+
+  constructor(database_dir: string) {
+    this._database_dir = database_dir;
+  }
+
   save(owner: string, snfs: SNFSMemory): void {
     const content = stringify(snfs);
     try {
-      fs.writeFileSync('database/' + owner + '.json', content);
+      fs.writeFileSync(path.join(this._database_dir, owner + '.json'), content);
     } catch (err) {
       if (err.code == 'ENOENT') {
-        fs.mkdirSync('database');
-        fs.writeFileSync('database/' + owner + '.json', content);
+        console.log(`Could not persist database. Did you create the directory ${ this._database_dir }?`);
       }
+      throw err;
     }
   }
 
@@ -29,7 +36,7 @@ export default class Persist {
   // null if there is a problem (usually file not found).
   load(owner: string, factory: () => SNFSMemory): SNFSMemory {
     try {
-      const content = fs.readFileSync('database/' + owner + '.json');
+      const content = fs.readFileSync(path.join(this._database_dir, owner + '.json'));
       const snfs = factory();
       parse(content.toString('utf-8'), snfs);
       return snfs;
@@ -113,15 +120,12 @@ interface SNFSFileMemoryDump {
   data: string; // base64 encoded.
 }
 function dumpSNFSFileMemory(file: SNFSFileMemory): SNFSFileMemoryDump {
-  // TODO: File data is Uint8Array, but typescript is not happy since toString() method
-  // doesn't take an argument.
-  const data: any = file.data;
   return {
     name: file.name,
     ino: file.ino,
     ctime: file.ctime.getTime(),
     mtime: file.mtime.getTime(),
-    data: data.toString('base64'),
+    data: Buffer.from(file.data).toString('base64'),
   };
 }
 function loadSNFSFileMemory(file: any): SNFSFileMemory {
@@ -130,7 +134,7 @@ function loadSNFSFileMemory(file: any): SNFSFileMemory {
     ino: file.ino,
     ctime: new Date(file.ctime),
     mtime: new Date(file.mtime),
-    data: Buffer.from(file.data, 'base64'),
+    data: new Uint8Array(Buffer.from(file.data, 'base64')),
   };
 }
 
