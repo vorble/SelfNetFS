@@ -899,9 +899,6 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
 
   async unlink(path: string): Promise<SNFSUnlink> {
     this._check_access();
-    // It would be nice if this happened only if the file exists.
-    // Could do it by doing stat() first, but it's not time to
-    // make everything perfect yet.
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
@@ -938,9 +935,6 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
 
   async move(path: string, newpath: string): Promise<SNFSMove> {
     this._check_access();
-    // It would be nice if this happened only if the file exists.
-    // Could do it by doing stat() first, but it's not time to
-    // make everything perfect yet.
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
