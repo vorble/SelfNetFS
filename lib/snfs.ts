@@ -82,8 +82,8 @@ export class SNFSFileSystemUsage {
 interface SNFSAuthCredentials {}
 
 export interface SNFSFileSystemGetOptions {
-  writeable: boolean; // Writable bit mask. Set to true to request a writeable fs.
-  union: string[]; // Array of fsno
+  writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
+  union?: string[]; // Array of fsno
 }
 
 export interface SNFSLogout {
@@ -160,7 +160,7 @@ export interface SNFSStat {
 
 export interface SNFSWriteFileOptions {
   // To preserve the ino of the file. Default is to not preserve.
-  truncate: boolean;
+  truncate?: boolean;
 }
 
 export interface SNFSWriteFile {

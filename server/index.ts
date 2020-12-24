@@ -73,7 +73,11 @@ async function lookupSession(req, res, next) {
 
 async function lookupFileSystem(req, res, next) {
   try {
-    const fs = await res.locals.session.session.fsresume(req.body.fs_token);
+    const { fs_token } = req.body;
+    if (typeof fs_token !== 'string') {
+      throw new SNFSError('fs_token must be a string.');
+    }
+    const fs = await res.locals.session.session.fsresume(fs_token as string);
     res.locals.fs = fs;
     next();
   } catch (err) {
@@ -117,7 +121,16 @@ app.options('/:owner/login', (req, res) => { res.end(); });
 app.post('/:owner/login', lookupOwner, async (req, res, next) => {
   try {
     const { name, password } = req.body;
-    const ses = await res.locals.snfs.login({ name, password });
+    if (typeof name !== 'string') {
+      throw new SNFSError('name must be a string.');
+    }
+    if (typeof password !== 'string') {
+      throw new SNFSError('password must be a string.');
+    }
+    const ses = await res.locals.snfs.login({
+      name: name as string,
+      password: password as string
+    });
     const session = sessions.create(ses);
     res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
     res.locals.finish({ pool: session.pool, userno: ses.info().userno });
@@ -165,7 +178,39 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
   try {
     const session: ServerSession = res.locals.session;
     const { options } = req.body;
-    res.locals.finish(await session.session.useradd(options));
+    if (typeof options != 'object') {
+      throw new SNFSError('options must be an object.');
+    }
+    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+      throw new SNFSError('options.name must be a string.');
+    }
+    if (typeof options.password !== 'undefined' && typeof options.password !== 'string') {
+      throw new SNFSError('options.password must be a string.');
+    }
+    if (typeof options.admin !== 'undefined' && typeof options.admin !== 'boolean') {
+      throw new SNFSError('options.admin must be a boolean.');
+    }
+    if (typeof options.fs !== 'undefined' && typeof options.fs !== 'string') {
+      throw new SNFSError('options.fs must be a string.');
+    }
+    if (typeof options.union !== 'undefined' && !Array.isArray(options.union)) {
+      throw new SNFSError('options.union must be an array of strings.');
+    }
+    if (typeof options.union !== 'undefined') {
+      for (const ufsno of options.union) {
+        if (typeof ufsno !== 'string') {
+          throw new SNFSError('options.union must be an array of strings.');
+        }
+      }
+    }
+    const use_options = {
+      name: options.name as string,
+      password: options.password as string,
+      admin: options.admin as boolean,
+      fs: options.fs as string,
+      union: options.union == null ? null : options.union.map(u => u as string),
+    };
+    res.locals.finish(await session.session.useradd(use_options));
   } catch (err) {
     next(err);
   }
@@ -176,7 +221,42 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
   try {
     const session: ServerSession = res.locals.session;
     const { userno, options } = req.body;
-    res.locals.finish(await session.session.usermod(userno, options));
+    if (typeof userno !== 'string') {
+      throw new SNFSError('userno must be a string.');
+    }
+    if (typeof options != 'object') {
+      throw new SNFSError('options must be an object.');
+    }
+    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+      throw new SNFSError('options.name must be a string.');
+    }
+    if (typeof options.password !== 'undefined' && typeof options.password !== 'string') {
+      throw new SNFSError('options.password must be a string.');
+    }
+    if (typeof options.admin !== 'undefined' && typeof options.admin !== 'boolean') {
+      throw new SNFSError('options.admin must be a boolean.');
+    }
+    if (typeof options.fs !== 'undefined' && typeof options.fs !== 'string') {
+      throw new SNFSError('options.fs must be a string.');
+    }
+    if (typeof options.union !== 'undefined' && !Array.isArray(options.union)) {
+      throw new SNFSError('options.union must be an array of strings.');
+    }
+    if (typeof options.union !== 'undefined') {
+      for (const ufsno of options.union) {
+        if (typeof ufsno !== 'string') {
+          throw new SNFSError('options.union must be an array of strings.');
+        }
+      }
+    }
+    const use_options = {
+      name: options.name as string,
+      password: options.password as string,
+      admin: options.admin as boolean,
+      fs: options.fs as string,
+      union: options.union == null ? null : options.union.map(u => u as string),
+    };
+    res.locals.finish(await session.session.usermod(userno as string, use_options));
   } catch (err) {
     next(err);
   }
@@ -187,7 +267,10 @@ app.post('/:owner/:pool/userdel', lookupOwner, lookupSession, async (req, res, n
   try {
     const session: ServerSession = res.locals.session;
     const { userno } = req.body;
-    res.locals.finish(await session.session.userdel(userno));
+    if (typeof userno !== 'string') {
+      throw new SNFSError('userno must be a string.');
+    }
+    res.locals.finish(await session.session.userdel(userno as string));
   } catch (err) {
     next(err);
   }
@@ -219,7 +302,32 @@ app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, nex
   try {
     const session: ServerSession = res.locals.session;
     const { fsno, options } = req.body;
-    const fs = await session.session.fsget(fsno, options);
+    if (typeof fsno !== 'string') {
+      throw new SNFSError('fsno must be a string.');
+    }
+    if (typeof options !== 'undefined') {
+      if (typeof options != 'object') {
+        throw new SNFSError('options must be an object.');
+      }
+      if (typeof options.writeable !== 'undefined' && typeof options.writeable !== 'boolean') {
+        throw new SNFSError('options.writeable must be a boolean.');
+      }
+      if (typeof options.union !== 'undefined' && !Array.isArray(options.union)) {
+        throw new SNFSError('options.union must be an array of strings.');
+      }
+      if (typeof options.union !== 'undefined') {
+        for (const ufsno of options.union) {
+          if (typeof ufsno !== 'string') {
+            throw new SNFSError('options.union must be an array of strings.');
+          }
+        }
+      }
+    }
+    const use_options = options == null ? null : {
+      writeable: options.writeable as boolean,
+      union: options.union == null ? null : options.union.map(u => u as string),
+    };
+    const fs = await session.session.fsget(fsno as string, use_options);
     res.locals.finish(fs.info());
   } catch (err) {
     next(err);
@@ -241,6 +349,31 @@ app.post('/:owner/:pool/fsadd', lookupOwner, lookupSession, async (req, res, nex
   try {
     const session: ServerSession = res.locals.session;
     const { options } = req.body;
+    if (typeof options != 'object') {
+      throw new SNFSError('options must be an object.');
+    }
+    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+      throw new SNFSError('options.name must be a string.');
+    }
+    if (typeof options.max_files !== 'undefined' && typeof options.max_files !== 'number') {
+      throw new SNFSError('options.max_files must be a number.');
+    }
+    if (typeof options.max_storage !== 'undefined' && typeof options.max_storage !== 'number') {
+      throw new SNFSError('options.max_storage must be a number.');
+    }
+    if (typeof options.max_depth !== 'undefined' && typeof options.max_depth !== 'number') {
+      throw new SNFSError('options.max_depth must be a number.');
+    }
+    if (typeof options.max_path !== 'undefined' && typeof options.max_path !== 'number') {
+      throw new SNFSError('options.max_path must be a number.');
+    }
+    const use_options = {
+      name: options?.name as string,
+      max_files: options?.max_files as number,
+      max_storage: options?.max_storage as number,
+      max_depth: options?.max_depth as number,
+      max_path: options.max_path as number,
+    };
     res.locals.finish(await session.session.fsadd(options));
   } catch (err) {
     next(err);
@@ -252,7 +385,35 @@ app.post('/:owner/:pool/fsmod', lookupOwner, lookupSession, async (req, res, nex
   try {
     const session: ServerSession = res.locals.session;
     const { fsno, options } = req.body;
-    res.locals.finish(await session.session.fsmod(fsno, options));
+    if (typeof fsno !== 'string') {
+      throw new SNFSError('fsno must be a string.');
+    }
+    if (typeof options != 'object') {
+      throw new SNFSError('options must be an object.');
+    }
+    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+      throw new SNFSError('options.name must be a string.');
+    }
+    if (typeof options.max_files !== 'undefined' && typeof options.max_files !== 'number') {
+      throw new SNFSError('options.max_files must be a number.');
+    }
+    if (typeof options.max_storage !== 'undefined' && typeof options.max_storage !== 'number') {
+      throw new SNFSError('options.max_storage must be a number.');
+    }
+    if (typeof options.max_depth !== 'undefined' && typeof options.max_depth !== 'number') {
+      throw new SNFSError('options.max_depth must be a number.');
+    }
+    if (typeof options.max_path !== 'undefined' && typeof options.max_path !== 'number') {
+      throw new SNFSError('options.max_path must be a number.');
+    }
+    const use_options = {
+      name: options?.name as string,
+      max_files: options?.max_files as number,
+      max_storage: options?.max_storage as number,
+      max_depth: options?.max_depth as number,
+      max_path: options.max_path as number,
+    };
+    res.locals.finish(await session.session.fsmod(fsno as string, use_options));
   } catch (err) {
     next(err);
   }
@@ -263,7 +424,10 @@ app.post('/:owner/:pool/fsdel', lookupOwner, lookupSession, async (req, res, nex
   try {
     const session: ServerSession = res.locals.session;
     const { fsno } = req.body;
-    res.locals.finish(await session.session.fsdel(fsno));
+    if (typeof fsno !== 'string') {
+      throw new SNFSError('fsno must be a string.');
+    }
+    res.locals.finish(await session.session.fsdel(fsno as string));
   } catch (err) {
     next(err);
   }
@@ -294,7 +458,10 @@ app.post('/:owner/:pool/readdir', lookupOwner, lookupSession, lookupFileSystem, 
   try {
     const fs: SNFSFileSystem = res.locals.fs;
     const { path } = req.body;
-    res.locals.finish(await fs.readdir(path));
+    if (typeof path !== 'string') {
+      throw new SNFSError('path must be a string.');
+    }
+    res.locals.finish(await fs.readdir(path as string));
   } catch (err) {
     next(err);
   }
@@ -305,7 +472,10 @@ app.post('/:owner/:pool/stat', lookupOwner, lookupSession, lookupFileSystem, asy
   try {
     const fs: SNFSFileSystem = res.locals.fs;
     const { path } = req.body;
-    const result = await fs.stat(path);
+    if (typeof path !== 'string') {
+      throw new SNFSError('path must be a string.');
+    }
+    const result = await fs.stat(path as string);
     res.locals.finish({
       ...result,
       ctime: result.ctime.getTime(),
@@ -321,7 +491,21 @@ app.post('/:owner/:pool/writefile', lookupOwner, lookupSession, lookupFileSystem
   try {
     const fs: SNFSFileSystem = res.locals.fs;
     const { path, data, options } = req.body;
-    res.locals.finish(await fs.writefile(path, Buffer.from(data, 'base64'), options));
+    if (typeof path !== 'string') {
+      throw new SNFSError('path must be a string.');
+    }
+    if (typeof data !== 'string') {
+      throw new SNFSError('data must be a string.');
+    }
+    if (typeof options !== 'undefined') {
+      if (typeof options.truncate !== 'undefined' && typeof options.truncate !== 'boolean') {
+        throw new SNFSError('options.truncate must be a boolean.');
+      }
+    }
+    const use_options = {
+      truncate: options?.truncate as boolean,
+    };
+    res.locals.finish(await fs.writefile(path as string, Buffer.from(data as string, 'base64'), use_options));
   } catch (err) {
     next(err);
   }
@@ -332,7 +516,10 @@ app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem,
   try {
     const fs: SNFSFileSystem = res.locals.fs;
     const { path } = req.body;
-    const result = await fs.readfile(path);
+    if (typeof path !== 'string') {
+      throw new SNFSError('path must be a string.');
+    }
+    const result = await fs.readfile(path as string);
     res.locals.finish({
       ...result,
       data: Buffer.from(result.data).toString('base64'),
@@ -347,7 +534,10 @@ app.post('/:owner/:pool/unlink', lookupOwner, lookupSession, lookupFileSystem, a
   try {
     const fs: SNFSFileSystem = res.locals.fs;
     const { path } = req.body;
-    res.locals.finish(await fs.unlink(path));
+    if (typeof path !== 'string') {
+      throw new SNFSError('path must be a string.');
+    }
+    res.locals.finish(await fs.unlink(path as string));
   } catch (err) {
     next(err);
   }
@@ -358,7 +548,13 @@ app.post('/:owner/:pool/move', lookupOwner, lookupSession, lookupFileSystem, asy
   try {
     const fs: SNFSFileSystem = res.locals.fs;
     const { path, newpath } = req.body;
-    res.locals.finish(await fs.move(path, newpath));
+    if (typeof path !== 'string') {
+      throw new SNFSError('path must be a string.');
+    }
+    if (typeof newpath !== 'string') {
+      throw new SNFSError('newpath must be a string.');
+    }
+    res.locals.finish(await fs.move(path as string, newpath as string));
   } catch (err) {
     next(err);
   }

@@ -392,10 +392,10 @@ export class SNFSSessionMemory extends SNFSSession {
 
   fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
     options = { ...options };
-    if (typeof options.union == 'undefined') {
+    if (options.union == null) {
       options.union = [];
     }
-    if (typeof options.writeable == 'undefined') {
+    if (options.writeable == null) {
       options.writeable = true;
     }
     const logged_in_user = this._lookup_user();
@@ -481,6 +481,7 @@ export class SNFSSessionMemory extends SNFSSession {
       throw new SNFSError('File system not found.');
     }
     if (typeof options.name == 'undefined') {
+      // Intentionally blank.
     } else if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
     } else {
@@ -679,6 +680,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
   }
 
   _writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): SNFSWriteFile {
+    options = { ...options };
     path = pathnormforfile(path);
     if (path.length > this._limits.max_path) {
       throw new SNFSError('max_path exceeded.');
@@ -687,7 +689,8 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       throw new SNFSError('max_depth exceeded.');
     }
     let f: SNFSFileMemory = this._files.get(path);
-    let truncate = options != null && options.truncate;
+    // default truncate is false.
+    let truncate = options.truncate == null ? false : options.truncate;
     if (f == null || !truncate) {
       let delta_bytes = 0;
       if (f != null) {
