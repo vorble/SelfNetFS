@@ -69,7 +69,12 @@ export class SNFSFileSystemDetail {
   name: string;
   fsno: string;
   limits: SNFSFileSystemLimits;
-  // TODO: Should also add information about current counts.
+  usage: SNFSFileSystemUsage;
+}
+
+export class SNFSFileSystemUsage {
+  no_files: number;
+  bytes_used: number; // BigInt maybe?
 }
 
 // Each SNFS sub-class might need its own type of credentials, so this class is just a place

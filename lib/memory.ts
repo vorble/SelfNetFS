@@ -109,6 +109,10 @@ function fileSystemToDetail(fs: SNFSFileSystemMemory): SNFSFileSystemDetail {
     name: fs._name,
     fsno: fs._fsno,
     limits: { ...fs._limits },
+    usage: {
+      no_files: fs._files.size,
+      bytes_used: fs._stored_bytes,
+    },
   };
 }
 
@@ -781,8 +785,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   detail(): Promise<SNFSFileSystemSessionDetail> {
     return Promise.resolve({
       fs_token: JSON.stringify({ fsno: this._fsno, union: this._union.map(ufs => ufs._fsno), writeable: this._writeable }),
-      name: this._name,
-      fs: fileSystemToDetail(this),
+      fs: fileSystemToDetail(this._fs),
       union: this._union.map(fileSystemToDetail),
     });
   }
