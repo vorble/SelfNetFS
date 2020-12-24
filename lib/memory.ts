@@ -766,9 +766,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
   }
 }
 
-// TODO: Currently exported so the API can get at the private
-// values to get the original acquire options.
-export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
+class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   _fs: SNFSFileSystemMemory;
   _union: SNFSFileSystemMemory[];
   _writeable: boolean;
@@ -981,8 +979,7 @@ export interface SNFSAuthCredentialsMemory {
   password: string;
 }
 
-// TODO: Don't want to export this.
-export interface UserRecord {
+interface UserRecord {
   userno: string;
   name: string;
   password: string;
@@ -991,8 +988,7 @@ export interface UserRecord {
   union: SNFSFileSystemMemory[];
 }
 
-// TODO: Don't want to export this.
-export class SNFSFileMemory {
+class SNFSFileMemory {
   name: string;
   ino: string;
   ctime: Date;

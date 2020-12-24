@@ -7,7 +7,6 @@ import {
   SNFSSession,
 } from '../lib/snfs';
 import {
-  SNFSFileSystemMemoryUnion,
   SNFSMemory,
   SNFSSessionMemory,
 } from '../lib/memory';

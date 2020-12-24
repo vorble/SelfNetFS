@@ -6,10 +6,8 @@ import {
   SNFSFileSystemLimits,
 } from '../lib/snfs';
 import {
-  SNFSFileMemory,
   SNFSFileSystemMemory,
   SNFSMemory,
-  UserRecord,
 } from '../lib/memory';
 
 export default class Persist {
@@ -112,6 +110,16 @@ function loadSNFSFileSystemMemory(fs: any, snfs: SNFSMemory): SNFSFileSystemMemo
   return result;
 }
 
+// Duplicate of SNFSFileMemory defined for the in-memory implementation so
+// the interface/class doesn't need to be exported but we can still
+// catch type discrepencies.
+interface SNFSFileMemory {
+  name: string;
+  ino: string;
+  ctime: Date;
+  mtime: Date;
+  data: Uint8Array;
+}
 interface SNFSFileMemoryDump {
   name: string;
   ino: string;
@@ -138,6 +146,17 @@ function loadSNFSFileMemory(file: any): SNFSFileMemory {
   };
 }
 
+// Duplicate of UserRecord defined for the in-memory implementation so
+// the interface/class doesn't need to be exported but we can still
+// catch type discrepencies.
+interface UserRecord {
+  userno: string;
+  name: string;
+  password: string;
+  admin: boolean;
+  fs: SNFSFileSystemMemory;
+  union: SNFSFileSystemMemory[];
+}
 interface UserRecordDump {
   userno: string;
   name: string;
