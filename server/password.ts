@@ -1,5 +1,5 @@
 import crypto = require('crypto');
-import { SNFSPasswordModule } from '../lib/memory';
+import { SNFSPasswordModule } from '../lib/password';
 
 const NULL_SHA512_SALT = Buffer.alloc(16);
 

@@ -96,9 +96,9 @@ function dumpSNFSFileSystemMemory(fs: SNFSFileSystemMemory): SNFSFileSystemMemor
     files.push(dumpSNFSFileMemory(file));
   }
   return {
-    name: fs.name,
-    fsno: fs.fsno,
-    limits: fs.limits,
+    name: fs._name,
+    fsno: fs._fsno,
+    limits: fs._limits,
     files,
   };
 }
@@ -152,13 +152,13 @@ function dumpUserRecord(user: UserRecord): UserRecordDump {
     name: user.name,
     password: user.password,
     admin: user.admin,
-    fs: (user.fs || {}).fsno || null,
-    union: user.union.map(ufs => ufs.fsno),
+    fs: (user.fs || {})._fsno || null,
+    union: user.union.map(ufs => ufs._fsno),
   };
 }
 function loadUserRecord(user: any, snfs: SNFSMemory): UserRecord {
   function lookupFS(fsno: string): SNFSFileSystemMemory {
-    const fs = snfs._fss.find(fs => fs.fsno == fsno);
+    const fs = snfs._fss.find(fs => fs._fsno == fsno);
     if (fs == null) {
       throw new SNFSError('File system not found.');
     }

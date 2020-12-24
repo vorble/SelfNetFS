@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SelfNetFS</title>
+  <script src="./selfnetfs.js"></script>
+</head>
+<body>
+  <p>Please open your developer console and use the api, ses, and fs variables to interact with the library.</p>
+  <p>If you're having trouble logging in, try using the <a href="shell.html">shell</a>'s connect command and then refresh this page.</p>
+  <script>
+    'use strict';
+
+    let api = new SNFSHttp();
+    let ses = null;
+    let fs = null;
+
+    function tenc(text) {
+      return new TextEncoder().encode(text);
+    }
+
+    function tdec(data) {
+      return new TextDecoder().decode(data);
+    }
+
+    async function main() {
+      const session_token = localStorage.getItem('snfs_session_token');
+      try {
+        ses = await api.resume(session_token);
+        console.log('Successfully resumed session.');
+      } catch (err) {
+        console.log('Couldn\'t resume, logging in again.');
+        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/keith', name: 'keith', password: 'password' });
+        localStorage.setItem('snfs_session_token', ses.info().session_token);
+      }
+      fs = await ses.fs();
+    }
+
+    main().then(() => {
+      console.log('Ready.');
+    }).catch(err => {
+      console.error(err);
+    });
+  </script>
+</body>
+</html>

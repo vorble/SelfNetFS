@@ -5,7 +5,6 @@ import uuid = require('uuid');
 
 import {
   SNFSMemory,
-  SNFSPasswordModule,
 } from '../lib/memory';
 import {
   SNFSError,
@@ -61,10 +60,10 @@ function lookupOwner(req, res, next) {
   next();
 }
 
-function lookupSession(req, res, next) {
+async function lookupSession(req, res, next) {
   try {
     const { pool } = req.params;
-    const session = sessions.lookup(res.locals.snfs, pool, req.cookies[pool]);
+    const session = await sessions.lookup(res.locals.snfs, pool, req.cookies[pool]);
     res.locals.session = session;
     next();
   } catch (err) {
@@ -74,7 +73,7 @@ function lookupSession(req, res, next) {
 
 async function lookupFileSystem(req, res, next) {
   try {
-    const fs = await res.locals.session.lookupFileSystem(req.body.fstoken);
+    const fs = await res.locals.session.session.fsresume(req.body.fs_token);
     res.locals.fs = fs;
     next();
   } catch (err) {
@@ -117,23 +116,11 @@ app.use((req, res, next) => {
 app.options('/:owner/login', (req, res) => { res.end(); });
 app.post('/:owner/login', lookupOwner, async (req, res, next) => {
   try {
-    const finish = res.locals.finish;
     const { name, password } = req.body;
     const ses = await res.locals.snfs.login({ name, password });
     const session = sessions.create(ses);
     res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
-    finish({ pool: session.pool });
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.options('/:owner/:pool/logout', (req, res) => { res.end(); });
-app.post('/:owner/:pool/logout', lookupOwner, async (req, res, next) => {
-  try {
-    const finish = res.locals.finish;
-    res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'None', secure: true, maxAge: 0 });
-    finish({});
+    res.locals.finish({ pool: session.pool, userno: ses.info().userno });
   } catch (err) {
     next(err);
   }
@@ -143,23 +130,31 @@ app.options('/:owner/:pool/resume', (req, res) => { res.end(); });
 app.post('/:owner/:pool/resume', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
     session.updateExpires();
     res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
-    finish({});
+    res.locals.finish({
+      userno: session.session.info().userno,
+    });
   } catch (err) {
     next(err);
   }
 });
 
-app.options('/:owner/:pool/fs', (req, res) => { res.end(); });
-app.post('/:owner/:pool/fs', lookupOwner, lookupSession, async (req, res, next) => {
+app.options('/:owner/:pool/sesdetail', (req, res) => { res.end(); });
+app.post('/:owner/:pool/sesdetail', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
-    const { fs, fstoken } = await session.fs();
-    const { name, fsno, limits } = fs;
-    finish({ fstoken, name, fsno, limits });
+    res.locals.finish(await session.session.detail());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/logout', (req, res) => { res.end(); });
+app.post('/:owner/:pool/logout', lookupOwner, async (req, res, next) => {
+  try {
+    res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'None', secure: true, maxAge: 0 });
+    res.locals.finish({});
   } catch (err) {
     next(err);
   }
@@ -169,9 +164,8 @@ app.options('/:owner/:pool/useradd', (req, res) => { res.end(); });
 app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
     const { options } = req.body;
-    finish(await session.session.useradd(options));
+    res.locals.finish(await session.session.useradd(options));
   } catch (err) {
     next(err);
   }
@@ -181,9 +175,8 @@ app.options('/:owner/:pool/usermod', (req, res) => { res.end(); });
 app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
     const { userno, options } = req.body;
-    finish(await session.session.usermod(userno, options));
+    res.locals.finish(await session.session.usermod(userno, options));
   } catch (err) {
     next(err);
   }
@@ -193,9 +186,8 @@ app.options('/:owner/:pool/userdel', (req, res) => { res.end(); });
 app.post('/:owner/:pool/userdel', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
     const { userno } = req.body;
-    finish(await session.session.userdel(userno));
+    res.locals.finish(await session.session.userdel(userno));
   } catch (err) {
     next(err);
   }
@@ -205,55 +197,18 @@ app.options('/:owner/:pool/userlist', (req, res) => { res.end(); });
 app.post('/:owner/:pool/userlist', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
-    finish(await session.session.userlist());
+    res.locals.finish(await session.session.userlist());
   } catch (err) {
     next(err);
   }
 });
 
-app.options('/:owner/:pool/fsadd', (req, res) => { res.end(); });
-app.post('/:owner/:pool/fsadd', lookupOwner, lookupSession, async (req, res, next) => {
+app.options('/:owner/:pool/fs', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fs', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
-    const { options } = req.body;
-    finish(await session.session.fsadd(options));
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.options('/:owner/:pool/fsmod', (req, res) => { res.end(); });
-app.post('/:owner/:pool/fsmod', lookupOwner, lookupSession, async (req, res, next) => {
-  try {
-    const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
-    const { fsno, options } = req.body;
-    finish(await session.session.fsmod(fsno, options));
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.options('/:owner/:pool/fsdel', (req, res) => { res.end(); });
-app.post('/:owner/:pool/fsdel', lookupOwner, lookupSession, async (req, res, next) => {
-  try {
-    const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
-    const { fsno } = req.body;
-    finish(await session.session.fsdel(fsno));
-  } catch (err) {
-    next(err);
-  }
-});
-
-app.options('/:owner/:pool/fslist', (req, res) => { res.end(); });
-app.post('/:owner/:pool/fslist', lookupOwner, lookupSession, async (req, res, next) => {
-  try {
-    const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
-    finish(await session.session.fslist());
+    const fs = await session.session.fs();
+    res.locals.finish(fs.info());
   } catch (err) {
     next(err);
   }
@@ -263,11 +218,72 @@ app.options('/:owner/:pool/fsget', (req, res) => { res.end(); });
 app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, next) => {
   try {
     const session: ServerSession = res.locals.session;
-    const finish = res.locals.finish;
     const { fsno, options } = req.body;
-    const { fs, fstoken } = await session.fsget(fsno, options);
-    const { name, limits } = fs;
-    finish({ fstoken, name, fsno, limits });
+    const fs = await session.session.fsget(fsno, options);
+    res.locals.finish(fs.info());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/fsresume', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fsresume', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    res.locals.finish(fs.info());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/fsadd', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fsadd', lookupOwner, lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const { options } = req.body;
+    res.locals.finish(await session.session.fsadd(options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/fsmod', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fsmod', lookupOwner, lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const { fsno, options } = req.body;
+    res.locals.finish(await session.session.fsmod(fsno, options));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/fsdel', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fsdel', lookupOwner, lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const { fsno } = req.body;
+    res.locals.finish(await session.session.fsdel(fsno));
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/fslist', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fslist', lookupOwner, lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    res.locals.finish(await session.session.fslist());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/fsdetail', (req, res) => { res.end(); });
+app.post('/:owner/:pool/fsdetail', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
+  try {
+    const fs: SNFSFileSystem = res.locals.fs;
+    res.locals.finish(await fs.detail());
   } catch (err) {
     next(err);
   }
@@ -277,9 +293,8 @@ app.options('/:owner/:pool/readdir', (req, res) => { res.end(); });
 app.post('/:owner/:pool/readdir', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
     const fs: SNFSFileSystem = res.locals.fs;
-    const finish = res.locals.finish;
     const { path } = req.body;
-    finish(await fs.readdir(path));
+    res.locals.finish(await fs.readdir(path));
   } catch (err) {
     next(err);
   }
@@ -289,10 +304,9 @@ app.options('/:owner/:pool/stat', (req, res) => { res.end(); });
 app.post('/:owner/:pool/stat', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
     const fs: SNFSFileSystem = res.locals.fs;
-    const finish = res.locals.finish;
     const { path } = req.body;
     const result = await fs.stat(path);
-    finish({
+    res.locals.finish({
       ...result,
       ctime: result.ctime.getTime(),
       mtime: result.mtime.getTime(),
@@ -306,9 +320,8 @@ app.options('/:owner/:pool/writefile', (req, res) => { res.end(); });
 app.post('/:owner/:pool/writefile', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
     const fs: SNFSFileSystem = res.locals.fs;
-    const finish = res.locals.finish;
     const { path, data, options } = req.body;
-    finish(await fs.writefile(path, Buffer.from(data, 'base64'), options));
+    res.locals.finish(await fs.writefile(path, Buffer.from(data, 'base64'), options));
   } catch (err) {
     next(err);
   }
@@ -318,10 +331,9 @@ app.options('/:owner/:pool/readfile', (req, res) => { res.end(); });
 app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
     const fs: SNFSFileSystem = res.locals.fs;
-    const finish = res.locals.finish;
     const { path } = req.body;
     const result = await fs.readfile(path);
-    finish({
+    res.locals.finish({
       ...result,
       data: Buffer.from(result.data).toString('base64'),
     });
@@ -334,9 +346,8 @@ app.options('/:owner/:pool/unlink', (req, res) => { res.end(); });
 app.post('/:owner/:pool/unlink', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
     const fs: SNFSFileSystem = res.locals.fs;
-    const finish = res.locals.finish;
     const { path } = req.body;
-    finish(await fs.unlink(path));
+    res.locals.finish(await fs.unlink(path));
   } catch (err) {
     next(err);
   }
@@ -346,9 +357,8 @@ app.options('/:owner/:pool/move', (req, res, next) => { res.end(); });
 app.post('/:owner/:pool/move', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
     const fs: SNFSFileSystem = res.locals.fs;
-    const finish = res.locals.finish;
     const { path, newpath } = req.body;
-    finish(await fs.move(path, newpath));
+    res.locals.finish(await fs.move(path, newpath));
   } catch (err) {
     next(err);
   }

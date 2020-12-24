@@ -6,14 +6,8 @@
   <script src="./selfnetfs.js"></script>
 </head>
 <body>
-  <p>Please open your developer console and use the api, ses, and fs variables to interact with the library.</p>
-  <p>If you're having trouble logging in, try using the <a href="shell.html">shell</a>'s connect command and then refresh this page.</p>
   <script>
     'use strict';
-
-    let api = new SNFSHttp();
-    let ses = null;
-    let fs = null;
 
     function tenc(text) {
       return new TextEncoder().encode(text);
@@ -24,21 +18,6 @@
     }
 
     async function main() {
-      const pool = localStorage.getItem('pool');
-      try {
-        ses = await api.resume('https://selfnetfs-api.home.arpa/keith', pool);
-        console.log('Successfully resumed session.');
-      } catch (err) {
-        console.log('Couldn\'t resume, logging in again.');
-        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/keith', name: 'keith', password: 'password' });
-        localStorage.setItem('pool', ses.pool);
-      }
-      fs = await ses.fs();
-
-      await test();
-    }
-
-    async function test() {
       const snfs = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
       await snfs.bootstrap('admin', 'password');
       const ses = await snfs.login({ name: 'admin', password: 'password' });
@@ -56,7 +35,7 @@
     }
 
     main().then(() => {
-      console.log('Ready.');
+      console.log('Done.');
     }).catch(err => {
       console.error(err);
     });

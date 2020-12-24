@@ -1,19 +1,23 @@
 import {
   SNFS,
-  SNFSAuthCredentials,
   SNFSError,
-  SNFSFileSystemDel,
   SNFSFileSystem,
+  SNFSFileSystemDel,
+  SNFSFileSystemDetail,
   SNFSFileSystemGetOptions,
   SNFSFileSystemInfo,
   SNFSFileSystemLimits,
   SNFSFileSystemOptions,
+  SNFSFileSystemSessionDetail,
+  SNFSFileSystemSessionInfo,
   SNFSLogout,
   SNFSMove,
   SNFSNodeKind,
   SNFSReadDir,
   SNFSReadFile,
   SNFSSession,
+  SNFSSessionDetail,
+  SNFSSessionInfo,
   SNFSStat,
   SNFSUnlink,
   SNFSUserDel,
@@ -22,6 +26,10 @@ import {
   SNFSWriteFile,
   SNFSWriteFileOptions,
 } from './snfs';
+import {
+  SNFSPasswordModule,
+  SNFSPasswordModuleNull,
+} from './password';
 
 const LIMITS = {
   max_files: 200,
@@ -30,35 +38,20 @@ const LIMITS = {
   max_path: 256,
 };
 
-export abstract class SNFSPasswordModule {
-  abstract hash(password: string): string;
-  abstract check(password: string, hash: string): boolean;
-}
-
-export class SNFSPasswordModuleNull extends SNFSPasswordModule {
-  hash(password: string): string {
-    return password;
-  }
-
-  check(password: string, hash: string): boolean {
-    return password === hash;
-  }
-}
-
 function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
   return {
     userno: user.userno,
     name: user.name,
     admin: user.admin,
     fs: user.fs == null ? null : {
-      name: user.fs.name,
-      fsno: user.fs.fsno,
+      name: user.fs._name,
+      fsno: user.fs._fsno,
       writeable: true,
     },
     union: user.union.map(f => {
       return {
-        name: f.name,
-        fsno: f.fsno,
+        name: f._name,
+        fsno: f._fsno,
         writeable: false,
       };
     }),
@@ -105,9 +98,17 @@ function fileSystemOptionsToLimits(options: SNFSFileSystemOptions, fallback: SNF
 
 function fileSystemToInfo(fs: SNFSFileSystemMemory): SNFSFileSystemInfo {
   return {
-    name: fs.name,
-    fsno: fs.fsno,
-    limits: fs.limits,
+    name: fs._name,
+    fsno: fs._fsno,
+    limits: { ...fs._limits },
+  };
+}
+
+function fileSystemToDetail(fs: SNFSFileSystemMemory): SNFSFileSystemDetail {
+  return {
+    name: fs._name,
+    fsno: fs._fsno,
+    limits: { ...fs._limits },
   };
 }
 
@@ -145,19 +146,6 @@ export class SNFSMemory extends SNFS {
     this._users.push(user);
   }
 
-  // TODO: Since the web server is state-less (doesn't remember sessions) it needs a
-  // way to re-acquire an SNFSSession instances for already logged in users. I'm not
-  // a fan of having this method to bypass login since it requires more thought around
-  // the usage points that I would like. Maybe session and fs tokens needs to be part
-  // of the base library components.
-  _bypass(userno: string): SNFSSessionMemory {
-    const user = this._users.find(u => u.userno === userno);
-    if (user == null) {
-      throw new SNFSError('User not found.');
-    }
-    return new SNFSSessionMemory(this, user);
-  }
-
   _lookup_user(userno: string): UserRecord {
     return this._users.find(u => u.userno == userno);
   }
@@ -181,16 +169,27 @@ export class SNFSMemory extends SNFS {
     const session = new SNFSSessionMemory(this, user);
     return Promise.resolve(session);
   }
+
+  resume(session_token: string): Promise<SNFSSession> {
+    const user = this._users.find(u => u.userno == session_token);
+    if (user == null) {
+      throw new SNFSError('Expired.'); // TODO: Not really expired, follow what the http implementation says.
+    }
+    const session = new SNFSSessionMemory(this, user);
+    return Promise.resolve(session);
+  }
 }
 
 export class SNFSSessionMemory extends SNFSSession {
   _snfs: SNFSMemory;
+  _session_token: string;
   _logged_in_userno: string;
 
   constructor(snfs: SNFSMemory, user: UserRecord) {
     super();
 
     this._snfs = snfs;
+    this._session_token = user.userno;
     this._logged_in_userno = user.userno;
   }
 
@@ -205,19 +204,27 @@ export class SNFSSessionMemory extends SNFSSession {
     return logged_in_user;
   }
 
+  info(): SNFSSessionInfo {
+    if (this._logged_in_userno == null) {
+      throw new SNFSError('Not logged in.');
+    }
+    return {
+      session_token: this._session_token,
+      userno: this._logged_in_userno,
+    };
+  }
+
+  detail(): Promise<SNFSSessionDetail> {
+    const user = this._lookup_user();
+    return Promise.resolve({
+      session_token: this._session_token,
+      user: userRecordToUserInfo(user),
+    });
+  }
+
   logout(): Promise<SNFSLogout> {
     this._logged_in_userno = null;
     return Promise.resolve({});
-  }
-
-  fs(): Promise<SNFSFileSystem> {
-    const logged_in_user = this._lookup_user();
-    const fs = logged_in_user.fs;
-    if (fs == null) {
-      throw new SNFSError('User has no FS.');
-    }
-    const writeable = true; // File system is writeable by virtue of being assigned the the user.
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
   useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
@@ -241,7 +248,7 @@ export class SNFSSessionMemory extends SNFSSession {
       if (options.fs == null) {
         fs = null;
       } else {
-        fs = this._snfs._fss.find(f => f.fsno == options.fs);
+        fs = this._snfs._fss.find(f => f._fsno == options.fs);
         if (fs == null) {
           throw new SNFSError('FS not found.');
         }
@@ -249,7 +256,7 @@ export class SNFSSessionMemory extends SNFSSession {
     }
     if (typeof options.union !== 'undefined') {
       for (const ufsno of options.union) {
-        const u = this._snfs._fss.find(f => f.fsno == ufsno);
+        const u = this._snfs._fss.find(f => f._fsno == ufsno);
         if (u == null) {
           throw new SNFSError('FS not found.');
         }
@@ -298,7 +305,7 @@ export class SNFSSessionMemory extends SNFSSession {
       if (options.fs == null) {
         new_user.fs = null;
       } else {
-        const fs = this._snfs._fss.find(f => f.fsno == options.fs);
+        const fs = this._snfs._fss.find(f => f._fsno == options.fs);
         if (fs == null) {
           throw new SNFSError('FS not found.');
         }
@@ -308,7 +315,7 @@ export class SNFSSessionMemory extends SNFSSession {
     if (typeof options.union !== 'undefined') {
       const union = [];
       for (const ufsno of options.union) {
-        const u = this._snfs._fss.find(f => f.fsno == ufsno);
+        const u = this._snfs._fss.find(f => f._fsno == ufsno);
         if (u == null) {
           throw new SNFSError('FS not found.');
         }
@@ -346,6 +353,80 @@ export class SNFSSessionMemory extends SNFSSession {
     }
   }
 
+  fs(): Promise<SNFSFileSystem> {
+    const logged_in_user = this._lookup_user();
+    const fs = logged_in_user.fs;
+    if (fs == null) {
+      throw new SNFSError('User has no FS.');
+    }
+    const writeable = true; // File system is writeable by virtue of being assigned the the user.
+    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
+  }
+
+  fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
+    options = { ...options };
+    if (typeof options.union == 'undefined') {
+      options.union = [];
+    }
+    if (typeof options.writeable == 'undefined') {
+      options.writeable = true;
+    }
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
+      const fsnos = [fsno, ...options.union];
+      for (const fsno of fsnos) {
+        if (fsno != (logged_in_user.fs || {})._fsno
+            && null == logged_in_user.union.find(ufs => ufs._fsno == fsno)) {
+            throw new SNFSError('Not authorized.');
+        }
+      }
+      if (null != logged_in_user.union.find(ufs => ufs._fsno == fsno)) {
+        options.writeable = false;
+      }
+    }
+    const fs = this._snfs._fss.find(fs => fs._fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('FS not found.');
+    }
+    const union = [];
+    for (const ufsno of options.union) {
+      const ufs = this._snfs._fss.find(fs => fs._fsno == ufsno);
+      if (ufs == null) {
+        throw new SNFSError('FS not found for union.');
+      }
+      union.push(ufs);
+    }
+    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
+  }
+
+  fsresume(fs_token: string): Promise<SNFSFileSystem> {
+    let tok = null;
+    try {
+      tok = JSON.parse(fs_token);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new SNFSError('Invalid token.');
+      }
+      throw err;
+    }
+    const { fsno, union, writeable } = tok;
+    if (typeof fsno !== 'string') {
+      throw new SNFSError('Invalid token.');
+    }
+    if (!Array.isArray(union)) {
+      throw new SNFSError('Invalid token.');
+    }
+    for (const ufsno of union) {
+      if (typeof ufsno !== 'string') {
+        throw new SNFSError('Invalid token.');
+      }
+    }
+    if (typeof writeable !== 'boolean') {
+      throw new SNFSError('Invalid token.');
+    }
+    return this.fsget(fsno, { union, writeable });
+  }
+
   fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
@@ -368,7 +449,7 @@ export class SNFSSessionMemory extends SNFSSession {
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    const fs = this._snfs._fss.find(f => f.fsno == fsno);
+    const fs = this._snfs._fss.find(f => f._fsno == fsno);
     if (fs == null) {
       throw new SNFSError('File system not found.');
     }
@@ -376,10 +457,10 @@ export class SNFSSessionMemory extends SNFSSession {
     } else if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
     } else {
-      fs.name = options.name;
+      fs._name = options.name;
     }
-    const limits = fileSystemOptionsToLimits(options, fs.limits);
-    fs.limits = limits;
+    const limits = fileSystemOptionsToLimits(options, fs._limits);
+    fs._limits = limits;
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
@@ -390,17 +471,17 @@ export class SNFSSessionMemory extends SNFSSession {
     }
     for (const user of this._snfs._users) {
       if (user.fs) {
-        if (user.fs.fsno == fsno) {
+        if (user.fs._fsno == fsno) {
           throw new SNFSError('FS still assigned to user.');
         }
       }
       for (const ufs of user.union) {
-        if (ufs.fsno == fsno) {
+        if (ufs._fsno == fsno) {
           throw new SNFSError('FS still assigned to user.');
         }
       }
     }
-    this._snfs._fss = this._snfs._fss.filter(x => x.fsno != fsno);
+    this._snfs._fss = this._snfs._fss.filter(x => x._fsno != fsno);
     return Promise.resolve({});
   }
 
@@ -414,45 +495,6 @@ export class SNFSSessionMemory extends SNFSSession {
         ...logged_in_user.union,
       ].filter(x => !!x).map(fileSystemToInfo));
     }
-  }
-
-  fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
-    options = { ...options };
-    if (typeof options.union == 'undefined') {
-      options.union = [];
-    }
-    if (typeof options.writeable == 'undefined') {
-      options.writeable = true;
-    }
-    const logged_in_user = this._lookup_user();
-    if (!logged_in_user.admin) {
-      const fsnos = [fsno, ...options.union];
-      for (const fsno of fsnos) {
-        if (fsno != (logged_in_user.fs || {}).fsno
-            && null == logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
-            throw new SNFSError('Not authorized.');
-        }
-      }
-      if (null != logged_in_user.union.find(ufs => ufs.fsno == fsno)) {
-        options.writeable = false;
-      }
-    }
-    const fs = this._snfs._fss.find(fs => fs.fsno == fsno);
-    if (fs == null) {
-      throw new SNFSError('FS not found.');
-    }
-    const union = [];
-    for (const ufsno of options.union) {
-      const ufs = this._snfs._fss.find(fs => fs.fsno == ufsno);
-      if (ufs == null) {
-        throw new SNFSError('FS not found for union.');
-      }
-      union.push(ufs);
-    }
-    if (union.length == 0 && options.writeable) {
-      return Promise.resolve(fs);
-    }
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 }
 
@@ -488,16 +530,38 @@ function pathnormfordir(path: string) {
 }
 
 export class SNFSFileSystemMemory extends SNFSFileSystem {
+  _name: string;
+  _fsno: string;
+  _limits: SNFSFileSystemLimits;
   _uuidgen: () => string;
   _files: Map<string, SNFSFileMemory>;
   _stored_bytes: number;
 
   constructor(name: string, fsno: string, limits: SNFSFileSystemLimits, uuidgen: () => string) {
-    super(name, fsno, limits);
+    super();
 
+    this._name = name;
+    this._fsno = fsno;
+    this._limits = limits;
     this._uuidgen = uuidgen;
     this._files = new Map<string, SNFSFileMemory>();
     this._stored_bytes = 0;
+  }
+
+  info(): SNFSFileSystemSessionInfo {
+    return {
+      fs_token: JSON.stringify({ fsno: this._fsno, union: [], writeable: true }),
+      fsno: this._fsno,
+      union: [],
+    };
+  }
+
+  detail(): Promise<SNFSFileSystemSessionDetail> {
+    return Promise.resolve({
+      fs_token: JSON.stringify({ fsno: this._fsno, union: [], writeable: true }),
+      fs: fileSystemToDetail(this),
+      union: [],
+    });
   }
 
   readdir(path: string): Promise<SNFSReadDir[]> {
@@ -570,10 +634,10 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
 
   writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
     path = pathnormforfile(path);
-    if (path.length > this.limits.max_path) {
+    if (path.length > this._limits.max_path) {
       throw new SNFSError('max_path exceeded.');
     }
-    if (path.split('/').length - 1 > this.limits.max_depth) {
+    if (path.split('/').length - 1 > this._limits.max_depth) {
       throw new SNFSError('max_depth exceeded.');
     }
     let f: SNFSFileMemory = this._files.get(path);
@@ -584,10 +648,10 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
         delta_bytes -= f.data.length;
       }
       delta_bytes += data.length;
-      if (delta_bytes + this._stored_bytes > this.limits.max_storage) {
+      if (delta_bytes + this._stored_bytes > this._limits.max_storage) {
         throw new SNFSError('max_storage exceeded.');
       }
-      if (f == null && this._files.size + 1 > this.limits.max_files) {
+      if (f == null && this._files.size + 1 > this._limits.max_files) {
         throw new SNFSError('max_files exceeded.');
       }
       f = new SNFSFileMemory();
@@ -600,7 +664,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       this._stored_bytes += delta_bytes;
     } else {
       let delta_bytes = data.length - f.data.length;
-      if (delta_bytes + this._stored_bytes > this.limits.max_storage) {
+      if (delta_bytes + this._stored_bytes > this._limits.max_storage) {
         throw new SNFSError('max_storage exceeded.');
       }
       f.data = data.slice();
@@ -638,10 +702,10 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
   move(path: string, newpath: string): Promise<SNFSMove> {
     path = pathnormforfile(path);
     newpath = pathnormforfile(newpath);
-    if (newpath.length > this.limits.max_path) {
+    if (newpath.length > this._limits.max_path) {
       throw new SNFSError('max_path exceeded.');
     }
-    if (newpath.split('/').length - 1 > this.limits.max_depth) {
+    if (newpath.split('/').length - 1 > this._limits.max_depth) {
       throw new SNFSError('max_depth exceeded.');
     }
     const f = this._files.get(path);
@@ -673,7 +737,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   _snfs: SNFSMemory;
 
   constructor(fs: SNFSFileSystemMemory, union: SNFSFileSystemMemory[], writeable: boolean, uuidgen: () => string, user: UserRecord, snfs: SNFSMemory) {
-    super(fs.name, fs.fsno, fs.limits, uuidgen);
+    super(fs._name, fs._fsno, fs._limits, uuidgen);
 
     this._fs = fs;
     this._union = union.slice();
@@ -695,15 +759,32 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
 
   _check_access(): void {
     const user = this._lookup_user();
-    if (user.fs.fsno != this._fs.fsno) {
+    if (user.fs._fsno != this._fs._fsno) {
       throw new SNFSError('Access denied.');
     }
     for (const fs of this._union) {
-      const it = user.union.find(ufs => ufs.fsno == fs.fsno);
+      const it = user.union.find(ufs => ufs._fsno == fs._fsno);
       if (it == null) {
         throw new SNFSError('Access denied.');
       }
     }
+  }
+
+  info(): SNFSFileSystemSessionInfo {
+    return {
+      fs_token: JSON.stringify({ fsno: this._fsno, union: this._union.map(ufs => ufs._fsno), writeable: this._writeable }),
+      fsno: this._fsno,
+      union: this._union.map(ufs => ufs._fsno),
+    };
+  }
+
+  detail(): Promise<SNFSFileSystemSessionDetail> {
+    return Promise.resolve({
+      fs_token: JSON.stringify({ fsno: this._fsno, union: this._union.map(ufs => ufs._fsno), writeable: this._writeable }),
+      name: this._name,
+      fs: fileSystemToDetail(this),
+      union: this._union.map(fileSystemToDetail),
+    });
   }
 
   async readdir(path: string): Promise<SNFSReadDir[]> {
@@ -857,7 +938,7 @@ export class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 }
 
-export interface SNFSAuthCredentialsMemory extends SNFSAuthCredentials {
+export interface SNFSAuthCredentialsMemory {
   name: string;
   password: string;
 }

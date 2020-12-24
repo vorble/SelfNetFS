@@ -102,8 +102,7 @@
       const [api_root, name, password] = args;
       try {
         ses = await api.login({ api_root, name, password });
-        localStorage.setItem('snfs_api_root', api_root);
-        localStorage.setItem('pool', ses.pool);
+        localStorage.setItem('snfs_session_token', ses.info().session_token);
       } catch (err) {
         handleErr(err);
         return;
@@ -122,9 +121,8 @@
           shell.log('fs: no fs');
           return;
         }
-        // You don't get good visibility into what's unioned together
-        // when looking at fs. This is something that can be addressed later.
-        shell.log(`${ fs.fsno } ${ fs.name }`);
+        const detail = await fs.detail();
+        shell.log(`${ detail.fs.fsno } ${ detail.fs.name }`);
       } else {
         const opts = argparse(args, ['--union', '--writeable']);
         if (opts.args.length != 1) {
@@ -149,7 +147,8 @@
         }
         try {
           fs = await ses.fsget(fsno, fsget);
-          shell.log(`${ fs.fsno } ${ fs.name }`);
+          const detail = await fs.detail();
+          shell.log(`${ detail.fs.fsno } ${ detail.fs.name }`);
         } catch(err) {
           handleErr(err);
           return;
@@ -587,12 +586,11 @@
 
     async function main() {
       shell.log('SelfNetFS Shell');
-      const api_root = localStorage.getItem('snfs_api_root');
-      const pool = localStorage.getItem('pool');
-      if (api_root != null) {
-        shell.log(`Resuming session at ${api_root}...`);
+      const session_token = localStorage.getItem('snfs_session_token');
+      if (session_token != null) {
+        shell.log(`Resuming session...`);
         try {
-          ses = await api.resume(api_root, pool);
+          ses = await api.resume(session_token);
           shell.log('Success.');
         } catch(err) {
           handleErr(err);
