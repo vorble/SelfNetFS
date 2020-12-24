@@ -156,8 +156,7 @@ export class SNFSMemory extends SNFS {
   }
 
   // just for in-memory implementation.
-  // Note: not async.
-  bootstrap(name: string, password: string) {
+  bootstrap(name: string, password: string): void {
     if (this._fss.length != 0 || this._users.length != 0) {
       throw new SNFSError('Too late to bootstrap.');
     }
@@ -603,7 +602,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     });
   }
 
-  readdir(path: string): Promise<SNFSReadDir[]> {
+  _readdir(path: string): SNFSReadDir[] {
     path = pathnormfordir(path);
     // Use the fact that path ends with a / to help with the search for files.
     const result: SNFSReadDir[] = [];
@@ -651,16 +650,20 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
         return a.kind < b.kind ? -1 : 1;
       return 0;
     });
-    return Promise.resolve(result);
+    return result;
   }
 
-  stat(path: string): Promise<SNFSStat> {
+  readdir(path: string): Promise<SNFSReadDir[]> {
+    return Promise.resolve(this._readdir(path));
+  }
+
+  _stat(path: string): SNFSStat {
     path = pathnormforfile(path);
     const f = this._files.get(path);
     if (f == null) {
       throw new SNFSError('File not found.');
     }
-    return Promise.resolve({
+    return {
       name: path,
       kind: SNFSNodeKind.File,
       ino: f.ino,
@@ -668,10 +671,14 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       mtime: f.mtime,
       size: f.data.length,
       writeable: true, // Non-writeability is handled by SNFSFileSystemMemoryUnion
-    });
+    };
   }
 
-  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+  stat(path: string): Promise<SNFSStat> {
+    return Promise.resolve(this._stat(path));
+  }
+
+  _writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): SNFSWriteFile {
     path = pathnormforfile(path);
     if (path.length > this._limits.max_path) {
       throw new SNFSError('max_path exceeded.');
@@ -710,23 +717,31 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       f.mtime = new Date();
       this._stored_bytes += delta_bytes;
     }
-    return Promise.resolve({
+    return {
       ino: f.ino,
-    });
+    };
   }
 
-  readfile(path: string): Promise<SNFSReadFile> {
+  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+    return Promise.resolve(this._writefile(path, data, options));
+  }
+
+  _readfile(path: string): SNFSReadFile {
     path = pathnormforfile(path);
     const f = this._files.get(path);
     if (f == null) {
       throw new SNFSError('File not found.');
     }
-    return Promise.resolve({
+    return {
       data: f.data.slice(),
-    });
+    };
   }
 
-  unlink(path: string): Promise<SNFSUnlink> {
+  readfile(path: string): Promise<SNFSReadFile> {
+    return Promise.resolve(this._readfile(path));
+  }
+
+  _unlink(path: string): SNFSUnlink {
     path = pathnormforfile(path);
     const f = this._files.get(path);
     if (f == null) {
@@ -734,11 +749,15 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     }
     this._files.delete(path);
     this._stored_bytes -= f.data.length;
-    return Promise.resolve({
-    });
+    return {
+    };
   }
 
-  move(path: string, newpath: string): Promise<SNFSMove> {
+  unlink(path: string): Promise<SNFSUnlink> {
+    return Promise.resolve(this._unlink(path));
+  }
+
+  _move(path: string, newpath: string): SNFSMove {
     path = pathnormforfile(path);
     newpath = pathnormforfile(newpath);
     if (newpath.length > this._limits.max_path) {
@@ -761,8 +780,11 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     }
     this._stored_bytes += f.data.length;
     f.name = newpath;
-    return Promise.resolve({
-    });
+    return {};
+  }
+
+  move(path: string, newpath: string): Promise<SNFSMove> {
+    return Promise.resolve(this._move(path, newpath));
   }
 }
 
@@ -823,16 +845,16 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     });
   }
 
-  async readdir(path: string): Promise<SNFSReadDir[]> {
+  readdir(path: string): Promise<SNFSReadDir[]> {
     this._check_access();
-    const result = await this._fs.readdir(path);
+    const result = this._fs._readdir(path);
     if (!this._writeable) {
       for (const f of result) {
         f.writeable = false;
       }
     }
     for (const fs of this._union) {
-      const more = await fs.readdir(path);
+      const more = fs._readdir(path);
       for (const r of more) {
         const existing = result.find(e => e.name == r.name && e.kind == r.kind);
         if (existing == null) {
@@ -848,19 +870,19 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
         return a.kind < b.kind ? -1 : 1;
       return 0;
     });
-    return result;
+    return Promise.resolve(result);
   }
 
-  async stat(path: string): Promise<SNFSStat> {
+  stat(path: string): Promise<SNFSStat> {
     this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {
       try {
-        const result = await fs.stat(path);
+        const result = fs._stat(path);
         if (errors.length > 0 || !this._writeable) {
           result.writeable = false;
         }
-        return result;
+        return Promise.resolve(result);
       } catch(err) {
         if (err instanceof SNFSError) {
           errors.push(err);
@@ -872,20 +894,20 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     throw errors[0];
   }
 
-  async writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
-    return await this._fs.writefile(path, data, options);
+    return Promise.resolve(this._fs._writefile(path, data, options));
   }
 
-  async readfile(path: string): Promise<SNFSReadFile> {
+  readfile(path: string): Promise<SNFSReadFile> {
     this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {
       try {
-        return await fs.readfile(path);
+        return Promise.resolve(fs._readfile(path));
       } catch(err) {
         if (err instanceof SNFSError) {
           errors.push(err);
@@ -897,7 +919,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     throw errors[0]; // Maybe this isn't a great idea? It'll have the original stack trace.
   }
 
-  async unlink(path: string): Promise<SNFSUnlink> {
+  unlink(path: string): Promise<SNFSUnlink> {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
@@ -906,7 +928,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     // have the file. Otherwise we'll throw a permission denied.
     let error = null;
     try {
-      return await this._fs.unlink(path);
+      return Promise.resolve(this._fs._unlink(path));
     } catch (err) {
       if (err instanceof SNFSError) {
         error = err;
@@ -917,7 +939,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     for (const fs of this._union) {
       let dothrow = false;
       try {
-        await fs.stat(path);
+        fs._stat(path);
         dothrow = true;
       } catch (err) {
         if (err instanceof SNFSError) {
@@ -933,14 +955,14 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     throw error;
   }
 
-  async move(path: string, newpath: string): Promise<SNFSMove> {
+  move(path: string, newpath: string): Promise<SNFSMove> {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
     let error = null;
     try {
-      return await this._fs.move(path, newpath);
+      return Promise.resolve(this._fs._move(path, newpath));
     } catch (err) {
       if (err instanceof SNFSError) {
         error = err;
@@ -951,7 +973,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     for (const fs of this._union) {
       let dothrow = false;
       try {
-        await fs.stat(path);
+        fs._stat(path);
         dothrow = true;
       } catch (err) {
         if (err instanceof SNFSError) {
