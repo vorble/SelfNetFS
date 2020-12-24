@@ -194,7 +194,6 @@ export class SNFSSessionHttp extends SNFSSession {
       fs_token,
     });
     return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, fs_token, result.fsno, result.union);
-    // TODO: Make sure the server side is sending the appropriate values in the result.
   }
 
   async fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
@@ -237,11 +236,11 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
   constructor(snfs: SNFSHttp, api_root: string, pool: string, fs_token: string, fsno: string, union: string[]) {
     super();
 
-    //TODO unused params
     this._snfs = snfs;
     this._api_root = api_root;
     this._pool = pool;
     this._fs_token = fs_token;
+    this._fsno = fsno;
     this._union = union.slice();
   }
 
