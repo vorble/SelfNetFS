@@ -134,5 +134,4 @@ guide:
 
 ```
 openssl ecparam -name secp256k1 -genkey -noout -out sestoken.pem
-openssl ecparam -name secp256k1 -genkey -noout -out fstoken.pem
 ```
