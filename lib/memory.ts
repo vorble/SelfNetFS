@@ -38,6 +38,20 @@ const LIMITS = {
   max_path: 256,
 };
 
+function uuidgen_unique(uuidgen: () => string, isduplicate: (string) => boolean): string {
+  let again = true;
+  let times = 4;
+  let value = null;
+  while (again) {
+    if (times-- == 0) {
+      throw new SNFSError('Too many UUID collissions.');
+    }
+    value = uuidgen();
+    again = isduplicate(value);
+  }
+  return value;
+}
+
 function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
   return {
     userno: user.userno,
@@ -131,15 +145,25 @@ export class SNFSMemory extends SNFS {
     this._users = [];
   }
 
+  _uuidgen_unique_fsno(): string {
+    return uuidgen_unique(this._uuidgen,
+      (fsno: string) => this._fss.find(fs => fs._fsno == fsno) != null);
+  }
+
+  _uuidgen_unique_userno(): string {
+    return uuidgen_unique(this._uuidgen,
+      (userno: string) => this._users.find(user => user.userno == userno) != null);
+  }
+
   // just for in-memory implementation.
   // Note: not async.
   bootstrap(name: string, password: string) {
     if (this._fss.length != 0 || this._users.length != 0) {
       throw new SNFSError('Too late to bootstrap.');
     }
-    const fs = new SNFSFileSystemMemory('default', this._uuidgen(), LIMITS, this._uuidgen);
+    const fs = new SNFSFileSystemMemory('default', this._uuidgen_unique_fsno(), LIMITS, this._uuidgen);
     const user = {
-      userno: this._uuidgen(),
+      userno: this._uuidgen_unique_userno(),
       name: name,
       admin: true,
       password: this._password_module.hash(password),
@@ -177,7 +201,7 @@ export class SNFSMemory extends SNFS {
   resume(session_token: string): Promise<SNFSSession> {
     const user = this._users.find(u => u.userno == session_token);
     if (user == null) {
-      throw new SNFSError('Expired.'); // TODO: Not really expired, follow what the http implementation says.
+      throw new SNFSError('User not found.');
     }
     const session = new SNFSSessionMemory(this, user);
     return Promise.resolve(session);
@@ -271,7 +295,7 @@ export class SNFSSessionMemory extends SNFSSession {
       admin = options.admin;
     }
     const user = {
-      userno: this._snfs._uuidgen(),
+      userno: this._snfs._uuidgen_unique_userno(),
       name: options.name,
       admin: admin,
       password: this._snfs._password_module.hash(options.password),
@@ -442,8 +466,8 @@ export class SNFSSessionMemory extends SNFSSession {
       throw new SNFSError('Option `name` may not be blank.');
     }
     const limits = fileSystemOptionsToLimits(options, LIMITS);
-    const fs = new SNFSFileSystemMemory(options.name, this._snfs._uuidgen(), limits, this._snfs._uuidgen);
-    // TODO: Check for collision? Shouldn't need to.
+    let fsno = this._snfs._uuidgen_unique_fsno();
+    const fs = new SNFSFileSystemMemory(options.name, fsno, limits, this._snfs._uuidgen);
     this._snfs._fss.push(fs);
     return Promise.resolve(fileSystemToInfo(fs));
   }
@@ -550,6 +574,17 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     this._uuidgen = uuidgen;
     this._files = new Map<string, SNFSFileMemory>();
     this._stored_bytes = 0;
+  }
+
+  _uuidgen_unique_ino(): string {
+    return uuidgen_unique(this._uuidgen, (ino: string) => {
+      for (const f of this._files.values()) {
+        if (f.ino === ino) {
+          return true;
+        }
+      }
+      return false;
+    });
   }
 
   info(): SNFSFileSystemSessionInfo {
@@ -660,7 +695,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       }
       f = new SNFSFileMemory();
       f.name = path;
-      f.ino = this._uuidgen();
+      f.ino = this._uuidgen_unique_ino();
       f.ctime = new Date();
       f.mtime = new Date();
       f.data = data.slice();
