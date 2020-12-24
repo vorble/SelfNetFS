@@ -122,7 +122,17 @@
           return;
         }
         const detail = await fs.detail();
-        shell.log(`${ detail.fs.fsno } ${ detail.fs.name }`);
+        function pct(n, d) {
+          n = n > d ? d : n;
+          return (
+            '' + Math.round(n / d * 100) + '%'
+          ).padStart(4);
+        }
+        shell.log(`${ detail.fs.fsno }* ${ detail.fs.name.padEnd(16) } ${ pct(detail.fs.usage.bytes_used, detail.fs.limits.max_storage) }`);
+        for (const ufs of detail.union) {
+          shell.log(`${ ufs.fsno }  ${ ufs.name.padEnd(16) } ${ pct(ufs.usage.bytes_used, ufs.limits.max_storage) }`);
+        }
+
       } else {
         const opts = argparse(args, ['--union', '--writeable']);
         if (opts.args.length != 1) {
@@ -148,11 +158,32 @@
         try {
           fs = await ses.fsget(fsno, fsget);
           const detail = await fs.detail();
-          shell.log(`${ detail.fs.fsno } ${ detail.fs.name }`);
+          shell.log(`${ detail.fs.fsno }* ${ detail.fs.name.padEnd(16) } ${ pct(detail.fs.usage.bytes_used, detail.fs.limits.max_storage) }`);
+          for (const ufs of detail.union) {
+            shell.log(`${ ufs.fsno }  ${ ufs.name.padEnd(16) } ${ pct(ufs.usage.bytes_used, ufs.limits.max_storage) }`);
+          }
         } catch(err) {
           handleErr(err);
           return;
         }
+      }
+    });
+
+    commands.set('id', async (...args) => {
+      if (args.length != 0) {
+        shell.log('id: usage: id');
+        return;
+      }
+      try {
+        const detail = await ses.detail();
+        shell.log(`${ detail.user.userno } ${ detail.user.name }`);
+        shell.log(`  ${ (detail.user.fs || []).fsno || null }* ${ detail.user.fs.name }`);
+        for (const ufs of detail.user.union) {
+          shell.log(`  ${ ufs.fsno }  ${ ufs.name }`);
+        }
+      } catch (err) {
+        handleErr(err);
+        return;
       }
     });
 
@@ -523,6 +554,7 @@
 
     commands.set('help', async (...args) => {
       shell.log('connect api_root user password');
+      shell.log('id');
       shell.log('useradd [--name name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
       shell.log('usermod userno [--name new_name] [--password password] [--admin true/false] [--fs fsno] [--union fsno,fsno,...]');
       shell.log('userdel userno');

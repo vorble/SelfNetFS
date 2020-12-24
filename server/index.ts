@@ -208,7 +208,7 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
       password: options.password as string,
       admin: options.admin as boolean,
       fs: options.fs as string,
-      union: options.union == null ? null : options.union.map(u => u as string),
+      union: typeof options.union == 'undefined' ? undefined : options.union.map(u => u as string),
     };
     res.locals.finish(await session.session.useradd(use_options));
   } catch (err) {
@@ -254,7 +254,7 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
       password: options.password as string,
       admin: options.admin as boolean,
       fs: options.fs as string,
-      union: options.union == null ? null : options.union.map(u => u as string),
+      union: typeof options.union == 'undefined' ? undefined : options.union.map(u => u as string),
     };
     res.locals.finish(await session.session.usermod(userno as string, use_options));
   } catch (err) {
@@ -323,9 +323,9 @@ app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, nex
         }
       }
     }
-    const use_options = options == null ? null : {
+    const use_options = typeof options === 'undefined' ? undefined : {
       writeable: options.writeable as boolean,
-      union: options.union == null ? null : options.union.map(u => u as string),
+      union: typeof options.union === 'undefined' ? undefined : options.union.map(u => u as string),
     };
     const fs = await session.session.fsget(fsno as string, use_options);
     res.locals.finish(fs.info());
