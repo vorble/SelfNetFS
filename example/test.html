@@ -9,6 +9,14 @@
   <script>
     'use strict';
 
+    async function make() {
+      const snfs = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
+      await snfs.bootstrap('admin', 'password');
+      const ses = await snfs.login({ name: 'admin', password: 'password' });
+      const fs = await ses.fs();
+      return { snfs, ses, fs };
+    }
+
     function tenc(text) {
       return new TextEncoder().encode(text);
     }
@@ -17,7 +25,122 @@
       return new TextDecoder().decode(data);
     }
 
+    async function good(handler) {
+      try {
+        await handler();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    async function bad(message, handler) {
+      try {
+        await handler();
+        console.error(new Error('Expected error.'));
+      } catch (err) {
+        if (message != err.message) {
+          console.error(err);
+        }
+      }
+    }
+
+    async function runTests(snfs, ses, fs) {
+      await good(async () => {
+        // -----------------------------
+        // T1 - Basic Functionality Test
+        // -----------------------------
+        //
+        // The follwoing tests activates the most basic functionality and sets up `fs`,
+        // the argument to runTests() for future tests. Be careful when updating this
+        // section of tests as other sections may rely on it being in a particular state.
+        await fs.writefile('/test1', tenc('test data'));
+        {
+          const { data } = await fs.readfile('/test1');
+          if (tdec(data) != 'test data') {
+            throw new Error('Unexpected data!');
+          }
+        }
+        {
+          const entries = await fs.readdir('/');
+          if (entries.length != 1) {
+            throw new Error('Unexpected number of entries!');
+          }
+        }
+        await bad('File not found.', async() => {
+          await fs.stat('/test2');
+        });
+        await fs.writefile('/test2', tenc('test2'));
+        await fs.stat('/test2');
+        await fs.writefile('/test1/testfile', tenc('more data'));
+        {
+          const entries = await fs.readdir('/');
+          if (entries.length != 3) {
+            throw new Error('Unexpected number of entries!');
+          }
+          if (entries.filter(e => e.kind == 'dir').length != 1) {
+            throw new Error('Unexpected number of directories!');
+          }
+          if (entries.filter(e => e.kind == 'file').length != 2) {
+            throw new Error('Unexpected number of files!');
+          }
+        }
+
+        // ---------------------------------------
+        // T2 - Test Union with User Modifications
+        // ---------------------------------------
+        //
+        // Depends on T1
+        //
+        // The following tests ensure that union file systems are working and that
+        // they operate in the expected manner as a user is modified.
+        //
+        // TODO: Test that taking access away from a fs affects acquired fs sessions.
+        {
+          const fsinfo = await ses.fsadd({ name: 'testing' });
+          await ses.useradd({ name: 'guest', password: 'password', fs: fsinfo.fsno  });
+        }
+        let ses2 = await snfs.login({ name: 'guest', password: 'password' });
+        let fs2 = await ses2.fs();
+        {
+          const entries = await fs2.readdir('/');
+          if (entries.length != 0) {
+            throw new Error('Unexpected number of entries!');
+          }
+        }
+        await ses.usermod(ses2.info().userno, { union: [fs.info().fsno] });
+        {
+          // Shouldn't see the files until you acquire the fs again.
+          const entries = await fs2.readdir('/');
+          if (entries.length != 0) {
+            throw new Error('Unexpected number of entries!');
+          }
+        }
+        fs2 = await ses2.fs();
+        // Now you should see the files.
+        {
+          const entries = await fs2.readdir('/');
+          if (entries.length != 3) {
+            throw new Error('Unexpected number of entries!');
+          }
+          if (entries.filter(e => e.kind == 'dir').length != 1) {
+            throw new Error('Unexpected number of directories!');
+          }
+          if (entries.filter(e => e.kind == 'file').length != 2) {
+            throw new Error('Unexpected number of files!');
+          }
+        }
+
+      });
+    }
+
+    async function basicTests() {
+      const { snfs, ses, fs } = await make();
+      await runTests(snfs, ses, fs);
+      console.log('Done.');
+    }
+
     async function main() {
+      await basicTests();
+      /*
       const snfs = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
       await snfs.bootstrap('admin', 'password');
       const ses = await snfs.login({ name: 'admin', password: 'password' });
@@ -32,13 +155,10 @@
       await fs.unlink('/test2');
       await fs.move('/test1', '/test2');
       console.log(fs);
+      */
     }
 
-    main().then(() => {
-      console.log('Done.');
-    }).catch(err => {
-      console.error(err);
-    });
+    main();
   </script>
 </body>
 </html>
