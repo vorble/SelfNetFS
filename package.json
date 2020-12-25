@@ -2,9 +2,10 @@
   "name": "selfnetfs",
   "version": "1.0.0",
   "description": "selfnetfs",
-  "main": "browser/index.ts",
+  "main": "dist/browser/index.js",
+  "types": "dist/browser/index.d.ts",
   "scripts": {
-    "build": "webpack",
+    "build": "tsc && webpack",
     "start": "ts-node --project tsconfig.server.json server/index.ts",
     "www": "cd example && python3 -m http.server 4001",
     "test": "echo \"Error: no test specified\" && exit 1"
