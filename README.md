@@ -14,7 +14,7 @@ let fs = null;
 
 async function startup() {
   try {
-    ses = api.login({
+    ses = await api.login({
       api_root: 'https://selfnetfs-api.home.arpa/keith',
       name: 'guest',
       password: 'password',
@@ -59,30 +59,27 @@ let ses = null;
 let fs = null;
 
 async function startup() {
-  let api_root = localStorage.getItem('snfs_api_root');
-  const pool = localStorage.getItem('pool');
-  if (api_root != null && pool != null) {
+  let session_token = localStorage.getItem('snfs_session_token');
+  if (session_token != null) {
     try {
-      ses = await api.resume(api_root, pool);
+      ses = await api.resume(session_token);
       fs = await srs.fs();
       return;
     } catch(err) {
       // Do something appropriate with the error.
       ses = null;
       fs = null;
-      localStorage.removeItem('snfs_api_root');
-      localStorage.removeItem('pool');
+      localStorage.removeItem('snfs_session_token');
     }
   }
   try {
-    api_root = 'https://selfnetfs-api.home.arpa/keith';
-    ses = api.login({
+    const api_root = 'https://selfnetfs-api.home.arpa/keith';
+    ses = await api.login({
       api_root,
       name: 'guest',
       password: 'password',
     });
-    localStorage.setItem('snfs_api_root', api_root);
-    localStorage.setItem('pool', pool);
+    localStorage.setItem('snfs_session_token', ses.info().session_token);
     fs = await ses.fs();
   } catch (err) {
     // Do something appropriate with the error.
@@ -129,8 +126,9 @@ web servers and familiar with NodeJS.
 
 ## Notes
 
-The following are notes to be integrated into a better setup
-guide:
+Without a session token private key, the server will use a randomly generated
+key for the session JWT. To use a key that allows sessions to be resumed
+between restarts of the server, a key can be created:
 
 ```
 openssl ecparam -name secp256k1 -genkey -noout -out sestoken.pem

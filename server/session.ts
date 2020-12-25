@@ -14,19 +14,30 @@ import crypto = require('crypto');
 import jwt = require('jsonwebtoken');
 import fs = require('fs');
 
-function loadSessionTokenSecret() {
+function loadSessionTokenPrivateKey() {
   try {
     return fs.readFileSync('./sestoken.pem');
   } catch (err) {
     if (err.code == 'ENOENT') {
-      console.log('Session Token Secret: Fallback to randomly generated value.');
-      return crypto.randomBytes(32);
+      console.log('Session Token Private Key: Fallback to randomly generated value.');
+      const { privateKey } = crypto.generateKeyPairSync('ec', {
+        namedCurve: 'secp256k1',
+        publicKeyEncoding: {
+          type: 'spki',
+          format: 'pem',
+        },
+        privateKeyEncoding: {
+          type: 'pkcs8',
+          format: 'pem',
+        },
+      });
+      return privateKey;
     }
     throw err;
   }
 }
 
-const SESTOKEN_SECRET = loadSessionTokenSecret();
+const SESTOKEN_PRIVATE_KEY = loadSessionTokenPrivateKey();
 
 export class ServerSessionManager {
   create(ses: SNFSSession): ServerSession {
@@ -57,7 +68,7 @@ export class ServerSession {
 
   async _lookup(snfs: SNFSMemory, pool: string, token: string): Promise<void> {
     try {
-      const sesargs = jwt.verify(token, SESTOKEN_SECRET, { algorithms: ['ES256'] });
+      const sesargs = jwt.verify(token, SESTOKEN_PRIVATE_KEY, { algorithms: ['ES256'] });
       const { session_token } = sesargs;
       if (typeof session_token !== 'string') {
         throw new SNFSError('Invalid token.');
@@ -77,7 +88,7 @@ export class ServerSession {
   updateExpires(): void {
     const session_token = this.session.info().session_token;
     const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
-    this.token = jwt.sign({ session_token, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_SECRET, { algorithm: 'ES256' });
+    this.token = jwt.sign({ session_token, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_PRIVATE_KEY, { algorithm: 'ES256' });
     this.expires = expires;
   }
 }
