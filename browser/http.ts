@@ -40,7 +40,7 @@ function urljoin(...parts: string[]): string {
   return parts.map(p => p.replace(/^\//, '').replace(/\/$/, '')).join('/');
 }
 
-async function apirequest(endpoint: string, payload) {
+async function apirequest(endpoint: string, payload: any) {
   const init: any = {
     method: 'POST',
     headers: {

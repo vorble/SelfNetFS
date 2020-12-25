@@ -38,18 +38,15 @@ const LIMITS = {
   max_path: 256,
 };
 
-function uuidgen_unique(uuidgen: () => string, isduplicate: (string) => boolean): string {
-  let again = true;
+function uuidgen_unique(uuidgen: () => string, isduplicate: (arg0: string) => boolean): string {
   let times = 4;
-  let value = null;
-  while (again) {
-    if (times-- == 0) {
-      throw new SNFSError('Too many UUID collissions.');
+  while (times-- > 0) {
+    const value = uuidgen();
+    if (!isduplicate(value)) {
+      return value;
     }
-    value = uuidgen();
-    again = isduplicate(value);
   }
-  return value;
+  throw new SNFSError('Too many UUID collissions.');
 }
 
 function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
@@ -73,39 +70,38 @@ function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
 }
 
 function fileSystemOptionsToLimits(options: SNFSFileSystemOptions, fallback: SNFSFileSystemLimits): SNFSFileSystemLimits {
-  const limits = {
-    max_files: options.max_files,
-    max_storage: options.max_storage,
-    max_depth: options.max_depth,
-    max_path: options.max_path,
-  };
-  if (typeof limits.max_files == 'undefined') {
-    limits.max_files = fallback.max_files;
-  } else if (limits.max_files < 0) {
-    throw new SNFSError('Option `max_files` out of bounds.');
-  } else if (Number.isNaN(limits.max_files) || !Number.isFinite(limits.max_files)) {
-    throw new SNFSError('Option `max_files` out of bounds.');
+  const limits = { ...fallback };
+  if (typeof options.max_files !== 'undefined') {
+    if (options.max_files < 0) {
+      throw new SNFSError('Option `max_files` out of bounds.');
+    } else if (Number.isNaN(options.max_files) || !Number.isFinite(options.max_files)) {
+      throw new SNFSError('Option `max_files` out of bounds.');
+    }
+    limits.max_files = options.max_files;
   }
-  if (typeof limits.max_storage == 'undefined') {
-    limits.max_storage = fallback.max_storage;
-  } else if (limits.max_storage < 0) {
-    throw new SNFSError('Option `max_storage` out of bounds.');
-  } else if (Number.isNaN(limits.max_storage) || !Number.isFinite(limits.max_storage)) {
-    throw new SNFSError('Option `max_storage` out of bounds.');
+  if (typeof options.max_storage !== 'undefined') {
+    if (options.max_storage < 0) {
+      throw new SNFSError('Option `max_storage` out of bounds.');
+    } else if (Number.isNaN(options.max_storage) || !Number.isFinite(options.max_storage)) {
+      throw new SNFSError('Option `max_storage` out of bounds.');
+    }
+    limits.max_storage = options.max_storage;
   }
-  if (typeof limits.max_depth == 'undefined') {
-    limits.max_depth = fallback.max_depth;
-  } else if (limits.max_depth < 0) {
-    throw new SNFSError('Option `max_depth` out of bounds.');
-  } else if (Number.isNaN(limits.max_depth) || !Number.isFinite(limits.max_depth)) {
-    throw new SNFSError('Option `max_depth` out of bounds.');
+  if (typeof options.max_depth !== 'undefined') {
+    if (options.max_depth < 0) {
+      throw new SNFSError('Option `max_depth` out of bounds.');
+    } else if (Number.isNaN(options.max_depth) || !Number.isFinite(options.max_depth)) {
+      throw new SNFSError('Option `max_depth` out of bounds.');
+    }
+    limits.max_depth = options.max_depth;
   }
-  if (typeof limits.max_path == 'undefined') {
-    limits.max_path = fallback.max_path;
-  } else if (limits.max_path < 0) {
-    throw new SNFSError('Option `max_path` out of bounds.');
-  } else if (Number.isNaN(limits.max_path) || !Number.isFinite(limits.max_path)) {
-    throw new SNFSError('Option `max_path` out of bounds.');
+  if (typeof options.max_path !== 'undefined') {
+    if (options.max_path < 0) {
+      throw new SNFSError('Option `max_path` out of bounds.');
+    } else if (Number.isNaN(options.max_path) || !Number.isFinite(options.max_path)) {
+      throw new SNFSError('Option `max_path` out of bounds.');
+    }
+    limits.max_path = options.max_path;
   }
   return limits;
 }
@@ -173,8 +169,8 @@ export class SNFSMemory extends SNFS {
     this._users.push(user);
   }
 
-  _lookup_user(userno: string): UserRecord {
-    return this._users.find(u => u.userno == userno);
+  _lookup_user(userno: string): UserRecord | null {
+    return this._users.find(u => u.userno == userno) || null;
   }
 
   login(options: SNFSAuthCredentialsMemory): Promise<SNFSSession> {
@@ -210,7 +206,7 @@ export class SNFSMemory extends SNFS {
 export class SNFSSessionMemory extends SNFSSession {
   _snfs: SNFSMemory;
   _session_token: string;
-  _logged_in_userno: string;
+  _logged_in_userno: string | null;
 
   constructor(snfs: SNFSMemory, user: UserRecord) {
     super();
@@ -518,10 +514,13 @@ export class SNFSSessionMemory extends SNFSSession {
     if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._fss.map(fileSystemToInfo));
     } else {
-      return Promise.resolve([
-        logged_in_user.fs, // May be null, hence filter
+      const result = [
         ...logged_in_user.union,
-      ].filter(x => !!x).map(fileSystemToInfo));
+      ].map(fileSystemToInfo);
+      if (logged_in_user.fs != null) {
+        result.unshift(fileSystemToInfo(logged_in_user.fs));
+      }
+      return Promise.resolve(result);
     }
   }
 }
@@ -634,11 +633,6 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
             result.push({
               name: restparts[0],
               kind: SNFSNodeKind.Directory,
-              ino: null,
-              ctime: null,
-              mtime: null,
-              size: null,
-              writeable: null,
             });
           }
         }
@@ -688,7 +682,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     if (path.split('/').length - 1 > this._limits.max_depth) {
       throw new SNFSError('max_depth exceeded.');
     }
-    let f: SNFSFileMemory = this._files.get(path);
+    let f = this._files.get(path);
     // default truncate is false.
     let truncate = options.truncate == null ? false : options.truncate;
     if (f == null || !truncate) {
@@ -703,12 +697,13 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       if (f == null && this._files.size + 1 > this._limits.max_files) {
         throw new SNFSError('max_files exceeded.');
       }
-      f = new SNFSFileMemory();
-      f.name = path;
-      f.ino = this._uuidgen_unique_ino();
-      f.ctime = new Date();
-      f.mtime = new Date();
-      f.data = data.slice();
+      f = {
+        name: path,
+        ino: this._uuidgen_unique_ino(),
+        ctime: new Date(),
+        mtime: new Date(),
+        data: data.slice(),
+      };
       this._files.set(path, f);
       this._stored_bytes += delta_bytes;
     } else {
@@ -821,7 +816,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
 
   _check_access(): void {
     const user = this._lookup_user();
-    if (user.fs._fsno != this._fs._fsno) {
+    if (user.fs == null || user.fs._fsno != this._fs._fsno) {
       throw new SNFSError('Access denied.');
     }
     for (const fs of this._union) {
@@ -1003,11 +998,11 @@ interface UserRecord {
   name: string;
   password: string;
   admin: boolean;
-  fs: SNFSFileSystemMemory;
+  fs: SNFSFileSystemMemory | null;
   union: SNFSFileSystemMemory[];
 }
 
-class SNFSFileMemory {
+interface SNFSFileMemory {
   name: string;
   ino: string;
   ctime: Date;

@@ -59,20 +59,20 @@ export interface SNFSFileSystemSessionDetail {
   union: SNFSFileSystemDetail[];
 }
 
-export class SNFSFileSystemInfo {
+export interface SNFSFileSystemInfo {
   name: string;
   fsno: string;
   limits: SNFSFileSystemLimits;
 }
 
-export class SNFSFileSystemDetail {
+export interface SNFSFileSystemDetail {
   name: string;
   fsno: string;
   limits: SNFSFileSystemLimits;
   usage: SNFSFileSystemUsage;
 }
 
-export class SNFSFileSystemUsage {
+export interface SNFSFileSystemUsage {
   no_files: number;
   bytes_used: number; // BigInt maybe?
 }
@@ -93,7 +93,7 @@ export interface SNFSUserInfo {
   userno: string;
   name: string;
   admin: boolean;
-  fs: SNFSFileSystemAccess;
+  fs: SNFSFileSystemAccess | null;
   union: SNFSFileSystemAccess[];
 }
 
@@ -121,6 +121,7 @@ export interface SNFSFileSystemLimits {
   max_path: number;
 }
 
+// TODO: Split this into two, one for fsadd and one for fsmod.
 export interface SNFSFileSystemOptions {
   name?: string;
   max_files?: number;
@@ -141,11 +142,11 @@ export interface SNFSReadDir {
   name: string;
   kind: SNFSNodeKind;
   // Below only for files.
-  ino: string; // uuid, like inode number in other file systems
-  ctime: Date;
-  mtime: Date;
-  size: number; // BigInt maybe?
-  writeable: boolean;
+  ino?: string; // uuid, like inode number in other file systems
+  ctime?: Date;
+  mtime?: Date;
+  size?: number; // BigInt maybe?
+  writeable?: boolean;
 }
 
 export interface SNFSStat {
