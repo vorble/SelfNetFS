@@ -193,13 +193,17 @@ export class SNFSMemory extends SNFS {
     return Promise.resolve(session);
   }
 
-  resume(session_token: string): Promise<SNFSSession> {
+  _resume(session_token: string): SNFSSession {
     const user = this._users.find(u => u.userno == session_token);
     if (user == null) {
       throw new SNFSError('User not found.');
     }
     const session = new SNFSSessionMemory(this, user);
-    return Promise.resolve(session);
+    return session;
+  }
+
+  resume(session_token: string): Promise<SNFSSession> {
+    return Promise.resolve(this._resume(session_token));
   }
 }
 
@@ -386,7 +390,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
-  fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
+  fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
     options = { ...options };
     if (options.union == null) {
       options.union = [];

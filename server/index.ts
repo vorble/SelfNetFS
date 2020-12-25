@@ -46,12 +46,14 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
   process.exit(0);
 }
 
-function lookupOwner(req, res, next) {
+function lookupOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
   const { owner } = req.params;
-  let snfs = owners.get(owner);
+  let snfs: SNFSMemory | undefined | null = owners.get(owner);
   if (snfs == null) {
     snfs = persist.load(owner, () => new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash()));
-    owners.set(owner, snfs);
+    if (snfs != null) {
+      owners.set(owner, snfs);
+    }
   }
   if (snfs == null) {
     snfs = null_owner;
@@ -60,10 +62,10 @@ function lookupOwner(req, res, next) {
   next();
 }
 
-async function lookupSession(req, res, next) {
+function lookupSession(req: express.Request, res: express.Response, next: express.NextFunction) {
   try {
     const { pool } = req.params;
-    const session = await sessions.lookup(res.locals.snfs, pool, req.cookies[pool]);
+    const session = sessions.lookup(res.locals.snfs, pool, req.cookies[pool]);
     res.locals.session = session;
     next();
   } catch (err) {
@@ -71,7 +73,7 @@ async function lookupSession(req, res, next) {
   }
 }
 
-async function lookupFileSystem(req, res, next) {
+async function lookupFileSystem(req: express.Request, res: express.Response, next: express.NextFunction) {
   try {
     const { fs_token } = req.body;
     if (typeof fs_token !== 'string') {
@@ -109,7 +111,7 @@ app.use((req, res, next) => {
     if (typeof req.body !== 'object') {
       return res.status(400).send({ message: 'Invalid request: missing request body.' });
     }
-    res.locals.finish = (response) => {
+    res.locals.finish = (response: any) => {
       persist.save(req.params.owner, res.locals.snfs);
       return res.status(200).send(response == null ? {} : response);
     };
@@ -132,7 +134,7 @@ app.post('/:owner/login', lookupOwner, async (req, res, next) => {
       password: password as string
     });
     const session = sessions.create(ses);
-    res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
+    res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'none', secure: true, expires: session.expires });
     res.locals.finish({ pool: session.pool, userno: ses.info().userno });
   } catch (err) {
     next(err);
@@ -144,7 +146,7 @@ app.post('/:owner/:pool/resume', lookupOwner, lookupSession, async (req, res, ne
   try {
     const session: ServerSession = res.locals.session;
     session.updateExpires();
-    res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'None', secure: true, expires: session.expires });
+    res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'none', secure: true, expires: session.expires });
     res.locals.finish({
       userno: session.session.info().userno,
     });
@@ -166,7 +168,7 @@ app.post('/:owner/:pool/sesdetail', lookupOwner, lookupSession, async (req, res,
 app.options('/:owner/:pool/logout', (req, res) => { res.end(); });
 app.post('/:owner/:pool/logout', lookupOwner, async (req, res, next) => {
   try {
-    res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'None', secure: true, maxAge: 0 });
+    res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'none', secure: true, maxAge: 0 });
     res.locals.finish({});
   } catch (err) {
     next(err);
@@ -208,7 +210,7 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
       password: options.password as string,
       admin: options.admin as boolean,
       fs: options.fs as string,
-      union: typeof options.union == 'undefined' ? undefined : options.union.map(u => u as string),
+      union: typeof options.union == 'undefined' ? undefined : options.union.map((u: any) => u as string),
     };
     res.locals.finish(await session.session.useradd(use_options));
   } catch (err) {
@@ -254,7 +256,7 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
       password: options.password as string,
       admin: options.admin as boolean,
       fs: options.fs as string,
-      union: typeof options.union == 'undefined' ? undefined : options.union.map(u => u as string),
+      union: typeof options.union == 'undefined' ? undefined : options.union.map((u: any) => u as string),
     };
     res.locals.finish(await session.session.usermod(userno as string, use_options));
   } catch (err) {
@@ -325,7 +327,7 @@ app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, nex
     }
     const use_options = typeof options === 'undefined' ? undefined : {
       writeable: options.writeable as boolean,
-      union: typeof options.union === 'undefined' ? undefined : options.union.map(u => u as string),
+      union: typeof options.union === 'undefined' ? undefined : options.union.map((u: any) => u as string),
     };
     const fs = await session.session.fsget(fsno as string, use_options);
     res.locals.finish(fs.info());
@@ -564,7 +566,7 @@ app.use((req, res) => {
   res.status(404).send({ message: 'Invalid endpoint.' });
 });
 
-app.use((err, req, res, next) => {
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err instanceof SNFSError) {
     return res.status(400).send({ message: err.message });
   }
@@ -572,8 +574,15 @@ app.use((err, req, res, next) => {
   return res.status(500).send({ message: 'Internal server error.' });
 });
 
-var server = app.listen(4000, () => {
-   var host = server.address().address;
-   var port = server.address().port;
-   console.log("Listening on http://%s:%s", host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+const server = app.listen(4000, () => {
+  const address = server.address();
+  if (address == null) {
+    console.log('Listening');
+  } else if (typeof address === 'string') {
+    console.log('Listening on http://' + address);
+  } else {
+    const host = address.address;
+    const port = address.port;
+    console.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+  }
 });

@@ -181,7 +181,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
   }
 
-  async fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
+  async fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsget'), {
       fsno,
       options,

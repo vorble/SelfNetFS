@@ -1,4 +1,3 @@
-import { tokengen } from './token';
 import {
   SNFS,
   SNFSError,
@@ -39,44 +38,41 @@ function loadSessionTokenPrivateKey() {
 
 const SESTOKEN_PRIVATE_KEY = loadSessionTokenPrivateKey();
 
-export class ServerSessionManager {
-  create(ses: SNFSSession): ServerSession {
-    const session = new ServerSession();
-    session._create(ses);
-    return session;
-  }
-
-  async lookup(snfs: SNFSMemory, pool: string, token: string): Promise<ServerSession> {
-    const session = new ServerSession();
-    await session._lookup(snfs, pool, token);
-    return session;
-  }
+function makeExpires() {
+  return new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
 }
 
-export class ServerSession {
-  token: string; // JWT encoded data.
-  pool: string;
-  expires: Date;
-  session: SNFSSession;
+function makePool() {
+  return crypto.randomBytes(16).toString('hex');
+}
 
-  _create(session: SNFSSession): void {
-    const session_token = session.info().session_token;
-    this.session = session;
-    this.pool = tokengen();
-    this.updateExpires();
+function makeToken(session_token: string, expires: Date) {
+  return jwt.sign({
+    session_token,
+    exp: Math.floor(expires.getTime() / 1000),
+  }, SESTOKEN_PRIVATE_KEY, { algorithm: 'ES256' });
+}
+
+export class ServerSessionManager {
+  create(session: SNFSSession): ServerSession {
+    const expires = makeExpires();
+    const pool = makePool();
+    const token = makeToken(session.info().session_token, expires);
+    return new ServerSession(token, pool, session, expires);
   }
 
-  async _lookup(snfs: SNFSMemory, pool: string, token: string): Promise<void> {
+  lookup(snfs: SNFSMemory, pool: string, token: string): ServerSession {
     try {
-      const sesargs = jwt.verify(token, SESTOKEN_PRIVATE_KEY, { algorithms: ['ES256'] });
+      const sesargs: any = jwt.verify(token, SESTOKEN_PRIVATE_KEY, { algorithms: ['ES256'] });
+      if (typeof sesargs !== 'object') {
+        throw new SNFSError('Invalid token.');
+      }
       const { session_token } = sesargs;
       if (typeof session_token !== 'string') {
         throw new SNFSError('Invalid token.');
       }
-      this.token = token;
-      this.pool = pool;
-      this.expires = null;
-      this.session = await snfs.resume(session_token);
+      const session = snfs._resume(session_token); // Bad accessing privates.
+      return new ServerSession(token, pool, session, new Date());
     } catch (err) {
       if (err instanceof jwt.JsonWebTokenError) {
         throw new SNFSError('Expired.');
@@ -84,11 +80,23 @@ export class ServerSession {
       throw err;
     }
   }
+}
 
-  updateExpires(): void {
-    const session_token = this.session.info().session_token;
-    const expires = new Date(new Date().getTime() + 60 * 60 * 24 * 30 * 1000); // 30 days
-    this.token = jwt.sign({ session_token, exp: Math.floor(expires.getTime() / 1000) }, SESTOKEN_PRIVATE_KEY, { algorithm: 'ES256' });
+export class ServerSession {
+  token: string; // JWT encoded data.
+  pool: string;
+  session: SNFSSession;
+  expires: Date;
+
+  constructor(token: string, pool: string, session: SNFSSession, expires: Date) {
+    this.token = token;
+    this.pool = pool;
+    this.session = session;
     this.expires = expires;
+  }
+
+  updateExpires() {
+    this.expires = makeExpires();
+    this.token = makeToken(this.session.info().session_token, this.expires);
   }
 }

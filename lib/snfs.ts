@@ -17,7 +17,7 @@ export abstract class SNFSSession {
   abstract userlist(): Promise<SNFSUserInfo[]>;
 
   abstract fs(): Promise<SNFSFileSystem>;
-  abstract fsget(fsno: string, options: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
+  abstract fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
   abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
   abstract fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
   abstract fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;

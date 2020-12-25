@@ -32,7 +32,7 @@ export default class Persist {
   // load() might get called for non-existant owners very
   // often, so it is designed not to throw and instead returns
   // null if there is a problem (usually file not found).
-  load(owner: string, factory: () => SNFSMemory): SNFSMemory {
+  load(owner: string, factory: () => SNFSMemory): SNFSMemory | null {
     try {
       const content = fs.readFileSync(path.join(this._database_dir, owner + '.json'));
       const snfs = factory();
@@ -76,9 +76,9 @@ function dumpSNFSMemory(snfs: SNFSMemory): SNFSMemoryDump {
 }
 function loadSNFSMemory(obj: any, snfs: SNFSMemory) {
   snfs._fss.length = 0;
-  const fss = obj.fss.map(fs => loadSNFSFileSystemMemory(fs, snfs));
+  const fss = obj.fss.map((fs: any) => loadSNFSFileSystemMemory(fs, snfs));
   snfs._fss = fss;
-  const users = obj.users.map(user => loadUserRecord(user, snfs));
+  const users = obj.users.map((user: any) => loadUserRecord(user, snfs));
   snfs._users = users;
 }
 
@@ -154,7 +154,7 @@ interface UserRecord {
   name: string;
   password: string;
   admin: boolean;
-  fs: SNFSFileSystemMemory;
+  fs: SNFSFileSystemMemory | null;
   union: SNFSFileSystemMemory[];
 }
 interface UserRecordDump {
@@ -162,7 +162,7 @@ interface UserRecordDump {
   name: string;
   password: string;
   admin: boolean;
-  fs: string; // fsno
+  fs: string | null; // fsno
   union: string[]; // fsno[]
 }
 function dumpUserRecord(user: UserRecord): UserRecordDump {
