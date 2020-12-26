@@ -9,10 +9,29 @@
   <script>
     'use strict';
 
-    async function make() {
+    const API_ROOT = 'https://selfnetfs-api.home.arpa/test';
+
+    async function makeMemory() {
       const snfs = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
       await snfs.bootstrap('admin', 'password');
       const ses = await snfs.login({ name: 'admin', password: 'password' });
+      const fs = await ses.fs();
+      return { snfs, ses, fs };
+    }
+
+    async function makeHttp() {
+      const snfs = new SNFSHttp();
+      let ses = null;
+      const session_token = localStorage.getItem('snfs_test_session_token');
+      try {
+        ses = await snfs.resume(session_token);
+        console.log('Successfully resumed session.');
+      } catch (err) {
+        console.log('Couldn\'t resume, logging in again.');
+        ses = await snfs.login({ api_root: API_ROOT, name: 'admin', password: 'password' });
+        localStorage.setItem('snfs_test_session_token', ses.info().session_token);
+      }
+      await doCleanup(ses);
       const fs = await ses.fs();
       return { snfs, ses, fs };
     }
@@ -98,7 +117,7 @@
           const fsinfo = await ses.fsadd({ name: 'testing' });
           await ses.useradd({ name: 'guest', password: 'password', fs: fsinfo.fsno  });
         }
-        let ses2 = await snfs.login({ name: 'guest', password: 'password' });
+        let ses2 = await snfs.login({ api_root: API_ROOT, name: 'guest', password: 'password' });
         let fs2 = await ses2.fs();
         {
           const entries = await fs2.readdir('/');
@@ -128,34 +147,42 @@
             throw new Error('Unexpected number of files!');
           }
         }
-
       });
     }
 
     async function basicTests() {
-      const { snfs, ses, fs } = await make();
-      await runTests(snfs, ses, fs);
+      const variants = [
+        await makeMemory(),
+        await makeHttp(),
+      ];
+      for (const { snfs, ses, fs } of variants) {
+        console.log('Testing', snfs);
+        await runTests(snfs, ses, fs);
+      }
       console.log('Done.');
+    }
+
+    async function doCleanup(ses) {
+      console.log('Cleaning up...');
+      const detail = await ses.detail();
+      for (const user of await ses.userlist()) {
+        if (user.userno !== detail.user.userno) {
+          console.log('Deleting user', user.userno, user.name);
+          await ses.userdel(user.userno);
+        }
+      }
+      const newfs = await ses.fsadd({ name: 'default' });
+      await ses.usermod(detail.user.userno, { name: 'admin', password: 'password', fs: newfs.fsno, union: [] });
+      for (const fs of await ses.fslist()) {
+        if (fs.fsno != newfs.fsno) {
+          console.log('Deleting fs', fs.fsno);
+          await ses.fsdel(fs.fsno);
+        }
+      }
     }
 
     async function main() {
       await basicTests();
-      /*
-      const snfs = new SNFSMemory(uuidgen, new SNFSPasswordModuleNull());
-      await snfs.bootstrap('admin', 'password');
-      const ses = await snfs.login({ name: 'admin', password: 'password' });
-      const fs = await ses.fs();
-
-      await fs.writefile('/test1', tenc('1234567890'));
-      await fs.writefile('/test2', tenc('abcdefghij'));
-      await fs.move('/test1', '/test2');
-      console.log(fs);
-      await fs.writefile('/test1', tenc('1234567890'));
-      await fs.writefile('/test2', tenc('abcdefghij'));
-      await fs.unlink('/test2');
-      await fs.move('/test1', '/test2');
-      console.log(fs);
-      */
     }
 
     main();
