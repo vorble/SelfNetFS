@@ -404,7 +404,7 @@ export class SNFSSessionMemory extends SNFSSession {
       for (const fsno of fsnos) {
         if (fsno != (logged_in_user.fs || {})._fsno
             && null == logged_in_user.union.find(ufs => ufs._fsno == fsno)) {
-            throw new SNFSError('Not authorized.');
+            throw new SNFSError('Access denied.');
         }
       }
       if (null != logged_in_user.union.find(ufs => ufs._fsno == fsno)) {
