@@ -30,7 +30,7 @@
         console.log('Successfully resumed session.');
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
-        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/keith', name: 'keith', password: 'password' });
+        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/myowner', name: 'myuser', password: 'password' });
         localStorage.setItem('snfs_session_token', ses.info().session_token);
       }
       fs = await ses.fs();

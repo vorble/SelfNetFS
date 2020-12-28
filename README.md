@@ -15,7 +15,7 @@ let fs = null;
 async function startup() {
   try {
     ses = await api.login({
-      api_root: 'https://selfnetfs-api.home.arpa/keith',
+      api_root: 'https://selfnetfs-api.home.arpa/myowner',
       name: 'guest',
       password: 'password',
     });
@@ -73,7 +73,7 @@ async function startup() {
     }
   }
   try {
-    const api_root = 'https://selfnetfs-api.home.arpa/keith';
+    const api_root = 'https://selfnetfs-api.home.arpa/myowner';
     ses = await api.login({
       api_root,
       name: 'guest',
