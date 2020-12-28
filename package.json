@@ -2,6 +2,7 @@
   "name": "selfnetfs",
   "version": "1.0.0",
   "description": "selfnetfs",
+  "files": [ "dist" ],
   "main": "dist/browser/index.js",
   "types": "dist/browser/index.d.ts",
   "scripts": {
