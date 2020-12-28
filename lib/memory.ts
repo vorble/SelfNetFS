@@ -271,6 +271,7 @@ export class SNFSSessionMemory extends SNFSSession {
     let fs = null;
     let union = [];
     let admin = false;
+    let seen_fsnos = [];
     if (typeof options.fs !== 'undefined') {
       if (options.fs == null) {
         fs = null;
@@ -279,6 +280,7 @@ export class SNFSSessionMemory extends SNFSSession {
         if (fs == null) {
           throw new SNFSError('FS not found.');
         }
+        seen_fsnos.push(fs._fsno);
       }
     }
     if (typeof options.union !== 'undefined') {
@@ -287,6 +289,10 @@ export class SNFSSessionMemory extends SNFSSession {
         if (u == null) {
           throw new SNFSError('FS not found.');
         }
+        if (seen_fsnos.indexOf(u._fsno) >= 0) {
+          throw new SNFSError('Duplicate fs in union.');
+        }
+        seen_fsnos.push(u._fsno);
         union.push(u);
       }
     }
@@ -328,6 +334,7 @@ export class SNFSSessionMemory extends SNFSSession {
     if (typeof options.admin !== 'undefined') {
       new_user.admin = options.admin;
     }
+    const seen_fsnos = [];
     if (typeof options.fs !== 'undefined') {
       if (options.fs == null) {
         new_user.fs = null;
@@ -336,6 +343,7 @@ export class SNFSSessionMemory extends SNFSSession {
         if (fs == null) {
           throw new SNFSError('FS not found.');
         }
+        seen_fsnos.push(fs._fsno);
         new_user.fs = fs;
       }
     }
@@ -346,6 +354,10 @@ export class SNFSSessionMemory extends SNFSSession {
         if (u == null) {
           throw new SNFSError('FS not found.');
         }
+        if (seen_fsnos.indexOf(u._fsno) >= 0) {
+          throw new SNFSError('Duplicate fs in union.');
+        }
+        seen_fsnos.push(u._fsno);
         union.push(u);
       }
       new_user.union = union;
@@ -480,15 +492,17 @@ export class SNFSSessionMemory extends SNFSSession {
     if (fs == null) {
       throw new SNFSError('File system not found.');
     }
-    if (typeof options.name == 'undefined') {
+    let use_name = fs._name;
+    if (typeof options.name === 'undefined') {
       // Intentionally blank.
     } else if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
     } else {
-      fs._name = options.name;
+      use_name = options.name;
     }
     const limits = fileSystemOptionsToLimits(options, fs._limits);
     fs._limits = limits;
+    fs._name = use_name;
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
@@ -508,6 +522,10 @@ export class SNFSSessionMemory extends SNFSSession {
           throw new SNFSError('FS still assigned to user.');
         }
       }
+    }
+    const fs = this._snfs._fss.find(x => x._fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('File system not found.');
     }
     this._snfs._fss = this._snfs._fss.filter(x => x._fsno != fsno);
     return Promise.resolve({});
