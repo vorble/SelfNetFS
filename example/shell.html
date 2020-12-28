@@ -44,7 +44,7 @@
     let $term = document.getElementById('term');
     let $prompt = document.getElementById('prompt');
     let $readline = document.getElementById('readline');
-    let api = new SNFSHttp();
+    let api = null;
     let ses = null;
     let fs = null;
 
@@ -100,8 +100,9 @@
         return;
       }
       const [api_root, name, password] = args;
+      api = new SNFSHttp(api_root);
       try {
-        ses = await api.login({ api_root, name, password });
+        ses = await api.login({ name, password });
         localStorage.setItem('snfs_session_token', ses.info().session_token);
       } catch (err) {
         handleErr(err);
@@ -618,7 +619,9 @@
 
     async function main() {
       shell.log('SelfNetFS Shell');
+      const api_root = localStorage.getItem('snfs_api_root');
       const session_token = localStorage.getItem('snfs_session_token');
+      api = new SNFSHttp(api_root);
       if (session_token != null) {
         shell.log(`Resuming session...`);
         try {

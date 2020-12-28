@@ -11,7 +11,7 @@
   <script>
     'use strict';
 
-    let api = new SNFSHttp();
+    let api = null;
     let ses = null;
     let fs = null;
 
@@ -24,15 +24,18 @@
     }
 
     async function main() {
+      const api_root = localStorage.getItem('snfs_api_root') ||  'https://selfnetfs-api.home.arpa/myowner';
       const session_token = localStorage.getItem('snfs_session_token');
+      api = new SNFSHttp(api_root);
       try {
         ses = await api.resume(session_token);
         console.log('Successfully resumed session.');
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
-        ses = await api.login({ api_root: 'https://selfnetfs-api.home.arpa/myowner', name: 'myuser', password: 'password' });
-        localStorage.setItem('snfs_session_token', ses.info().session_token);
       }
+      ses = await api.login({ name: 'myuser', password: 'password' });
+      localStorage.setItem('snfs_api_root', api_root);
+      localStorage.setItem('snfs_session_token', ses.info().session_token);
       fs = await ses.fs();
     }
 

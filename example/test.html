@@ -20,9 +20,10 @@
     }
 
     async function makeHttp() {
-      const snfs = new SNFSHttp();
       let ses = null;
+      const api_root = localStorage.getItem('snfs_test_api_root') || API_ROOT;
       const session_token = localStorage.getItem('snfs_test_session_token');
+      const snfs = new SNFSHttp(api_root);
       try {
         ses = await snfs.resume(session_token);
         console.log('Successfully resumed session.');
@@ -30,6 +31,7 @@
         console.log('Couldn\'t resume, logging in again.');
         ses = await snfs.login({ api_root: API_ROOT, name: 'admin', password: 'password' });
         localStorage.setItem('snfs_test_session_token', ses.info().session_token);
+        localStorage.setItem('snfs_test_api_root', api_root);
       }
       await doCleanup(ses);
       const fs = await ses.fs();

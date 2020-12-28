@@ -31,7 +31,6 @@ import {
 } from './buffer';
 
 export interface SNFSAuthCredentialsHttp {
-  api_root: string;
   name: string;
   password: string;
 }
@@ -74,16 +73,20 @@ async function apirequest(endpoint: string, payload: any) {
 }
 
 export class SNFSHttp extends SNFS {
-  constructor() {
+  _api_root: string;
+
+  constructor(api_root: string) {
     super();
+
+    this._api_root = api_root;
   }
 
   async login(options: SNFSAuthCredentialsHttp): Promise<SNFSSession> {
-    const result = await apirequest(urljoin(options.api_root, 'login'), {
+    const result = await apirequest(urljoin(this._api_root, 'login'), {
       name: options.name,
       password: options.password,
     });
-    return new SNFSSessionHttp(this, options.api_root, result.pool, result.userno);
+    return new SNFSSessionHttp(this, result.pool, result.userno);
   }
 
   async resume(session_token: string): Promise<SNFSSession> {
@@ -96,16 +99,13 @@ export class SNFSHttp extends SNFS {
       }
       throw err;
     }
-    const { api_root, pool, userno } = tok;
-    if (typeof api_root !== 'string') {
-      throw new SNFSError('Invalid token.');
-    }
+    const { pool } = tok;
     if (typeof pool !== 'string') {
       throw new SNFSError('Invalid token.');
     }
-    const result = await apirequest(urljoin(api_root, pool, 'resume'), {
+    const result = await apirequest(urljoin(this._api_root, pool, 'resume'), {
     });
-    return new SNFSSessionHttp(this, api_root, pool, result.userno);
+    return new SNFSSessionHttp(this, pool, result.userno);
   }
 }
 
@@ -115,11 +115,11 @@ export class SNFSSessionHttp extends SNFSSession {
   _userno: string;
   pool: string;
 
-  constructor(snfs: SNFSHttp, api_root: string, pool: string, userno: string) {
+  constructor(snfs: SNFSHttp, pool: string, userno: string) {
     super();
 
     this._snfs = snfs;
-    this._api_root = api_root;
+    this._api_root = snfs._api_root;
     this._userno = userno;
     this.pool = pool;
   }
@@ -127,9 +127,7 @@ export class SNFSSessionHttp extends SNFSSession {
   info(): SNFSSessionInfo {
     return {
       session_token: JSON.stringify({
-        api_root: this._api_root,
         pool: this.pool,
-        userno: this._userno,
       }),
       userno: this._userno,
     };
