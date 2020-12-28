@@ -101,7 +101,7 @@ export interface SNFSUserOptions {
   name?: string;
   password?: string;
   admin?: boolean;
-  fs?: string;
+  fs?: string | null;
   union?: string[];
 }
 

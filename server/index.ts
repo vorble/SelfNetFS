@@ -192,8 +192,8 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
     if (typeof options.admin !== 'undefined' && typeof options.admin !== 'boolean') {
       throw new SNFSError('options.admin must be a boolean.');
     }
-    if (typeof options.fs !== 'undefined' && typeof options.fs !== 'string') {
-      throw new SNFSError('options.fs must be a string.');
+    if (typeof options.fs !== 'undefined' && typeof options.fs !== 'string' && options.fs !== null) {
+      throw new SNFSError('options.fs must be a string or null.');
     }
     if (typeof options.union !== 'undefined' && !Array.isArray(options.union)) {
       throw new SNFSError('options.union must be an array of strings.');
@@ -206,10 +206,10 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
       }
     }
     const use_options = {
-      name: options.name as string,
-      password: options.password as string,
-      admin: options.admin as boolean,
-      fs: options.fs as string,
+      name: options.name as string | undefined,
+      password: options.password as string | undefined,
+      admin: options.admin as boolean | undefined,
+      fs: options.fs as string | undefined,
       union: typeof options.union == 'undefined' ? undefined : options.union.map((u: any) => u as string),
     };
     res.locals.finish(await session.session.useradd(use_options));
@@ -238,8 +238,8 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
     if (typeof options.admin !== 'undefined' && typeof options.admin !== 'boolean') {
       throw new SNFSError('options.admin must be a boolean.');
     }
-    if (typeof options.fs !== 'undefined' && typeof options.fs !== 'string') {
-      throw new SNFSError('options.fs must be a string.');
+    if (typeof options.fs !== 'undefined' && typeof options.fs !== 'string' && options.fs !== null) {
+      throw new SNFSError('options.fs must be a string or null.');
     }
     if (typeof options.union !== 'undefined' && !Array.isArray(options.union)) {
       throw new SNFSError('options.union must be an array of strings.');
@@ -252,10 +252,10 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
       }
     }
     const use_options = {
-      name: options.name as string,
-      password: options.password as string,
-      admin: options.admin as boolean,
-      fs: options.fs as string,
+      name: options.name as string | undefined,
+      password: options.password as string | undefined,
+      admin: options.admin as boolean | undefined,
+      fs: options.fs as string | null | undefined,
       union: typeof options.union == 'undefined' ? undefined : options.union.map((u: any) => u as string),
     };
     res.locals.finish(await session.session.usermod(userno as string, use_options));

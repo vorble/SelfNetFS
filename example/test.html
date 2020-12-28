@@ -154,7 +154,6 @@
           await fs2.writefile('/cant_write', tenc('test'));
         });
         // Restore access to the unioned fs, but take away the main fs.
-        /*
         await ses.usermod(ses2.info().userno, { fs: null, union: [fs.info().fsno] });
         await bad('Access denied.', async () => {
           await fs2.readdir('/');
@@ -162,7 +161,6 @@
         await bad('Access denied.', async () => {
           await fs2.writefile('/cant_write', tenc('test'));
         });
-        */
         // Now swap the main FS and the union, which should also produce errors.
         await ses.usermod(ses2.info().userno, { fs: fs.info().fsno, union: [fs2.info().fsno] });
         await bad('Access denied.', async () => {
