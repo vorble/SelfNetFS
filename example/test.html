@@ -172,7 +172,86 @@
         // Restore intended access.
         await ses.usermod(ses2.info().userno, { fs: fs2.info().fsno, union: [fs.info().fsno] });
         await fs2.readdir('/');
+
+        // ---------------------------------
+        // T3 - Test Usermod/Useradd/Userdel
+        // ---------------------------------
+        //
+        // The following tests ensure the basic user management functions work in an expected
+        // way.
+        {
+          await bad('Duplicate fs in union.', async () => {
+            await ses.useradd({ name: 'testing', password: 'password', fs: fs.info().fsno, union: [fs.info().fsno] });
+          });
+          await bad('Duplicate fs in union.', async () => {
+            await ses.useradd({ name: 'testing', password: 'password', union: [fs.info().fsno, fs.info().fsno] });
+          });
+          const test_user = await ses.useradd({ name: 'testing', password: 'password' });
+          await bad('Duplicate fs in union.', async () => {
+            await ses.usermod(test_user.userno, { name: 'testing', fs: fs.info().fsno, union: [fs.info().fsno] });
+          });
+          await bad('Duplicate fs in union.', async () => {
+            await ses.usermod(test_user.userno, { name: 'testing', union: [fs.info().fsno, fs.info().fsno] });
+          });
+          await bad('User already exists.', async () => {
+            await ses.useradd({ name: 'testing', password: 'password' });
+          });
+          await ses.userdel(test_user.userno);
+          await bad('User not found.', async () => {
+            await ses.userdel(test_user.userno);
+          });
+          {
+            const { userno } = await ses.useradd({ name: 'testing', password: 'password', fs: fs.info().fsno });
+            await ses.userdel(userno);
+          }
+          {
+            const { userno } = await ses.useradd({ name: 'testing', password: 'password', union: [fs.info().fsno] });
+            await ses.userdel(userno);
+          }
+        }
+
+        // ---------------------------
+        // T4 - Test Fsmod/Fsadd/Fsdel
+        // ---------------------------
+        {
+          const fsinfo = await ses.fsadd({ name: 'testing', max_files: 1, max_storage: 1, max_depth: 1, max_path: 1 });
+          const fs2 = await ses.fsget(fsinfo.fsno);
+          {
+            const detail = await fs2.detail();
+            if (detail.fs.name !== 'testing') {
+              throw new Error('name not honored by fsadd.');
+            } else if (detail.fs.limits.max_files !== 1) {
+              throw new Error('max_files not honored by fsadd.');
+            } else if (detail.fs.limits.max_storage !== 1) {
+              throw new Error('max_storage not honored by fsadd.');
+            } else if (detail.fs.limits.max_depth !== 1) {
+              throw new Error('max_depth not honored by fsadd.');
+            } else if (detail.fs.limits.max_path !== 1) {
+              throw new Error('max_path not honored by fsadd.');
+            }
+          }
+          await ses.fsmod(fsinfo.fsno, { name: 'testing2', max_files: 2, max_storage: 2, max_depth: 2, max_path: 2 });
+          {
+            const detail = await fs2.detail();
+            if (detail.fs.name !== 'testing2') {
+              throw new Error('name not honored by fsmod.');
+            } else if (detail.fs.limits.max_files !== 2) {
+              throw new Error('max_files not honored by fsmod.');
+            } else if (detail.fs.limits.max_storage !== 2) {
+              throw new Error('max_storage not honored by fsmod.');
+            } else if (detail.fs.limits.max_depth !== 2) {
+              throw new Error('max_depth not honored by fsmod.');
+            } else if (detail.fs.limits.max_path !== 2) {
+              throw new Error('max_path not honored by fsmod.');
+            }
+          }
+          await ses.fsdel(fsinfo.fsno);
+          await bad('File system not found.', async () => {
+            await ses.fsdel(fsinfo.fsno);
+          });
+        }
       });
+
     }
 
     async function basicTests() {
