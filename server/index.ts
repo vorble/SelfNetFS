@@ -180,7 +180,7 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
   try {
     const session: ServerSession = res.locals.session;
     const { options } = req.body;
-    if (typeof options != 'object') {
+    if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
     if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
@@ -226,7 +226,7 @@ app.post('/:owner/:pool/usermod', lookupOwner, lookupSession, async (req, res, n
     if (typeof userno !== 'string') {
       throw new SNFSError('userno must be a string.');
     }
-    if (typeof options != 'object') {
+    if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
     if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
@@ -308,7 +308,7 @@ app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, nex
       throw new SNFSError('fsno must be a string.');
     }
     if (typeof options !== 'undefined') {
-      if (typeof options != 'object') {
+      if (typeof options !== 'object') {
         throw new SNFSError('options must be an object.');
       }
       if (typeof options.writeable !== 'undefined' && typeof options.writeable !== 'boolean') {
@@ -351,7 +351,7 @@ app.post('/:owner/:pool/fsadd', lookupOwner, lookupSession, async (req, res, nex
   try {
     const session: ServerSession = res.locals.session;
     const { options } = req.body;
-    if (typeof options != 'object') {
+    if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
     if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
@@ -390,7 +390,7 @@ app.post('/:owner/:pool/fsmod', lookupOwner, lookupSession, async (req, res, nex
     if (typeof fsno !== 'string') {
       throw new SNFSError('fsno must be a string.');
     }
-    if (typeof options != 'object') {
+    if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
     if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
