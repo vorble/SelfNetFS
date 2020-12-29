@@ -100,9 +100,10 @@
         return;
       }
       const [api_root, name, password] = args;
-      api = new SNFSHttp(api_root);
+      api = new SNFS.SNFSHttp(api_root);
       try {
         ses = await api.login({ name, password });
+        localStorage.setItem('snfs_api_root', api_root);
         localStorage.setItem('snfs_session_token', ses.info().session_token);
       } catch (err) {
         handleErr(err);
@@ -440,7 +441,7 @@
         const ents = await fs.readdir(args[0]);
         for (const ent of ents) {
           let name = ent.name;
-          if (ent.kind == SNFSNodeKind.Directory) {
+          if (ent.kind == SNFS.SNFSNodeKind.Directory) {
             name += '/';
           }
           shell.log(`${ name }`);
@@ -609,7 +610,7 @@
     };
 
     function handleErr(err) {
-      if (err instanceof SNFSError) {
+      if (err instanceof SNFS.SNFSError) {
         shell.log(`ERROR: ${ err.message }`);
       } else {
         shell.log('Internal error. Please check the developer console.');
@@ -621,7 +622,7 @@
       shell.log('SelfNetFS Shell');
       const api_root = localStorage.getItem('snfs_api_root');
       const session_token = localStorage.getItem('snfs_session_token');
-      api = new SNFSHttp(api_root);
+      api = new SNFS.SNFSHttp(api_root);
       if (session_token != null) {
         shell.log(`Resuming session...`);
         try {

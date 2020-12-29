@@ -26,7 +26,7 @@
     async function main() {
       const api_root = localStorage.getItem('snfs_api_root') ||  'https://selfnetfs-api.home.arpa/myowner';
       const session_token = localStorage.getItem('snfs_session_token');
-      api = new SNFSHttp(api_root);
+      api = new SNFS.SNFSHttp(api_root);
       try {
         ses = await api.resume(session_token);
         console.log('Successfully resumed session.');

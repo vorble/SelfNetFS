@@ -20,7 +20,8 @@ module.exports = {
   },
   output: {
     filename: 'selfnetfs.js',
-    libraryTarget: 'window',
+    library: 'SNFS',
+    libraryTarget: 'umd',
     path: path.resolve(__dirname, 'dist'),
   },
 };

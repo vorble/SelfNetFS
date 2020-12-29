@@ -8,14 +8,14 @@ The following is a simplistic example of this library's usage that outlines auth
 writing a file, and reading a file.
 
 ```javascript
-let api = new SNFSHttp();
+let api = null;
 let ses = null;
 let fs = null;
 
 async function startup() {
+  api = new SNFS.SNFSHttp('https://selfnetfs-api.home.arpa/myowner');
   try {
     ses = await api.login({
-      api_root: 'https://selfnetfs-api.home.arpa/myowner',
       name: 'guest',
       password: 'password',
     });
@@ -54,38 +54,24 @@ An alternative startup logic that resumes a session from a previous page load
 might look like this:
 
 ```javascript
-let api = new SNFSHttp();
+let api = null;
 let ses = null;
 let fs = null;
 
 async function startup() {
-  let session_token = localStorage.getItem('snfs_session_token');
-  if (session_token != null) {
-    try {
-      ses = await api.resume(session_token);
-      fs = await srs.fs();
-      return;
-    } catch(err) {
-      // Do something appropriate with the error.
-      ses = null;
-      fs = null;
-      localStorage.removeItem('snfs_session_token');
-    }
-  }
+  const api_root = localStorage.getItem('snfs_api_root') || 'https://selfnetfs-api.home.arpa/myowner';
+  const session_token = localStorage.getItem('snfs_session_token');
+  api = new SNFS.SNFSHttp(api_root);
   try {
-    const api_root = 'https://selfnetfs-api.home.arpa/myowner';
-    ses = await api.login({
-      api_root,
-      name: 'guest',
-      password: 'password',
-    });
-    localStorage.setItem('snfs_session_token', ses.info().session_token);
-    fs = await ses.fs();
+    ses = await api.resume(session_token);
+    console.log('Successfully resumed session.');
   } catch (err) {
-    // Do something appropriate with the error.
-    ses = null;
-    fs = null;
+    console.log('Couldn\'t resume, logging in again.');
+    ses = await api.login({ name: 'myuser', password: 'password' });
+    localStorage.setItem('snfs_api_root', api_root);
+    localStorage.setItem('snfs_session_token', ses.info().session_token);
   }
+  fs = await ses.fs();
 }
 ```
 
