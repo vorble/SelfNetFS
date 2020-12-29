@@ -77,9 +77,7 @@ async function startup() {
 
 I encourage you to look at the source file [lib/snfs.ts](/lib/snfs.ts) for
 a more complete listing of the methods and classes available when using the
-library. Additional methods and fields are outlined in
-[browser/http.ts](/browser/http.ts) (i.e. `ses.pool` which you need if you
-want your web application to remain logged-in between page loads).
+library.
 
 ## Running the Shell/Tests
 
