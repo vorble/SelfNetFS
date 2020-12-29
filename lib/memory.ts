@@ -187,7 +187,7 @@ export class SNFSMemory extends SNFS {
     }
     const match = this._password_module.check(options.password, user.password);
     if (!match || reject) {
-      throw new SNFSError('Authorization denied.');
+      throw new SNFSError('Authentication failed.');
     }
     const session = new SNFSSessionMemory(this, user);
     return Promise.resolve(session);
