@@ -1,6 +1,30 @@
-# selfnetfs
+# SelfNetFS
 
-A file system for browser applications.
+A file system for web applications.
+
+## Preparation
+
+You may use the library in your plain old HTML page by `<script>` including the library
+from unpkg (library is namespaced as `SNFS`):
+
+```html
+<script src="https://unpkg.com/selfnetfs/dist/selfnetfs.js"></script>
+<!-- OR with a specific semantic-versioning version or range -->
+<script src="https://unpkg.com/selfnetfs@^1.0.0/dist/selfnetfs.js"></script>
+```
+
+For web applications with build steps (e.g. React applications), you can install the npm
+package:
+
+```bash
+npm install selfnetfs
+```
+
+And then import it:
+
+```javascript
+const SNFS = require('selfnetfs');
+```
 
 ## Example
 
@@ -22,6 +46,7 @@ async function startup() {
     fs = await ses.fs();
   } catch (err) {
     // Do something appropriate with the error.
+    api = null;
     ses = null;
     fs = null;
   }
@@ -87,6 +112,7 @@ unless your browser considers http://127.0.0.1/ a secure host). The details for
 how to do most steps should be familiar to you if you're familiar with running
 web servers and familiar with NodeJS.
 
+* Check out a copy of this repository.
 * Install libraries with `npm install`.
 * Build the browser library by running `npm run build`.
   This will produce the file `dist/selfnetfs.js` which you
