@@ -104,6 +104,21 @@
             throw new Error('Unexpected number of files!');
           }
         }
+        await fs.writefile('/test3', tenc('test3'));
+        await fs.move('/test3', '/test4');
+        await fs.unlink('/test4');
+        {
+          const entries = await fs.readdir('/');
+          if (entries.length != 3) {
+            throw new Error('Unexpected number of entries!');
+          }
+          if (entries.filter(e => e.kind == 'dir').length != 1) {
+            throw new Error('Unexpected number of directories!');
+          }
+          if (entries.filter(e => e.kind == 'file').length != 2) {
+            throw new Error('Unexpected number of files!');
+          }
+        }
 
         // ---------------------------------------
         // T2 - Test Union with User Modifications

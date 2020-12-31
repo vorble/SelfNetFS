@@ -299,7 +299,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
       fs_token: this._fs_token,
       path,
     });
-    return {};
+    return result;
   }
 
   async move(path: string, newpath: string): Promise<SNFSMove> {
@@ -308,6 +308,6 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
       path,
       newpath,
     });
-    return {};
+    return result;
   }
 }
