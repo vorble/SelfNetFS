@@ -31,7 +31,7 @@ export abstract class SNFSFileSystem {
 
   abstract readdir(path: string): Promise<SNFSReadDir[]>;
   abstract stat(path: string): Promise<SNFSStat>;
-  abstract writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
+  abstract writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
   abstract readfile(path: string): Promise<SNFSReadFile>;
   abstract unlink(path: string): Promise<SNFSUnlink>;
   abstract move(path: string, newpath: string): Promise<SNFSMove>;

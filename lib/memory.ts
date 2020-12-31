@@ -695,7 +695,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return Promise.resolve(this._stat(path));
   }
 
-  _writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): SNFSWriteFile {
+  _writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): SNFSWriteFile {
     options = { ...options };
     path = pathnormforfile(path);
     if (path.length > this._limits.max_path) {

@@ -275,7 +275,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     return result;
   }
 
-  async writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+  async writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'writefile'), {
       fs_token: this._fs_token,
       path,
