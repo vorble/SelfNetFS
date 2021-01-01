@@ -354,7 +354,7 @@ app.post('/:owner/:pool/fsadd', lookupOwner, lookupSession, async (req, res, nex
     if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
-    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+    if (typeof options.name !== 'string') {
       throw new SNFSError('options.name must be a string.');
     }
     if (typeof options.max_files !== 'undefined' && typeof options.max_files !== 'number') {
