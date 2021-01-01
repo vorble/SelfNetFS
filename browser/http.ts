@@ -1,4 +1,6 @@
 import {
+  FsaddOptions,
+  FsmodOptions,
   SNFS,
   SNFSError,
   SNFSFileSystem,
@@ -6,7 +8,6 @@ import {
   SNFSFileSystemGetOptions,
   SNFSFileSystemInfo,
   SNFSFileSystemLimits,
-  SNFSFileSystemOptions,
   SNFSFileSystemSessionDetail,
   SNFSFileSystemSessionInfo,
   SNFSLogout,
@@ -194,14 +195,14 @@ export class SNFSSessionHttp extends SNFSSession {
     return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, fs_token, result.fsno, result.union);
   }
 
-  async fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
+  async fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsadd'), {
       options,
     });
     return result;
   }
 
-  async fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
+  async fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsmod'), {
       fsno,
       options,

@@ -19,8 +19,8 @@ export abstract class SNFSSession {
   abstract fs(): Promise<SNFSFileSystem>;
   abstract fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
   abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
-  abstract fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
-  abstract fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
+  abstract fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo>;
+  abstract fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo>;
   abstract fsdel(fsno: string): Promise<SNFSFileSystemDel>;
   abstract fslist(): Promise<SNFSFileSystemInfo[]>;
 }
@@ -121,8 +121,15 @@ export interface SNFSFileSystemLimits {
   max_path: number;
 }
 
-// TODO: Split this into two, one for fsadd and one for fsmod.
-export interface SNFSFileSystemOptions {
+export interface FsaddOptions {
+  name: string;
+  max_files?: number;
+  max_storage?: number;
+  max_depth?: number;
+  max_path?: number;
+}
+
+export interface FsmodOptions {
   name?: string;
   max_files?: number;
   max_storage?: number;

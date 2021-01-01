@@ -1,4 +1,6 @@
 import {
+  FsaddOptions,
+  FsmodOptions,
   SNFS,
   SNFSError,
   SNFSFileSystem,
@@ -7,7 +9,6 @@ import {
   SNFSFileSystemGetOptions,
   SNFSFileSystemInfo,
   SNFSFileSystemLimits,
-  SNFSFileSystemOptions,
   SNFSFileSystemSessionDetail,
   SNFSFileSystemSessionInfo,
   SNFSLogout,
@@ -69,7 +70,7 @@ function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
   };
 }
 
-function fileSystemOptionsToLimits(options: SNFSFileSystemOptions, fallback: SNFSFileSystemLimits): SNFSFileSystemLimits {
+function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallback: SNFSFileSystemLimits): SNFSFileSystemLimits {
   const limits = { ...fallback };
   if (typeof options.max_files !== 'undefined') {
     if (options.max_files < 0) {
@@ -466,14 +467,12 @@ export class SNFSSessionMemory extends SNFSSession {
     return this.fsget(fsno, { union, writeable });
   }
 
-  fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
+  fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    if (typeof options.name == 'undefined') {
-      throw new SNFSError('Option `name` is required.');
-    } else if (!options.name) {
+    if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
     }
     const limits = fileSystemOptionsToLimits(options, LIMITS);
@@ -483,7 +482,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo> {
+  fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
