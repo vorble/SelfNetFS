@@ -11,8 +11,8 @@ export abstract class SNFSSession {
 
   abstract logout(): Promise<SNFSLogout>;
 
-  abstract useradd(options: SNFSUserOptions): Promise<SNFSUserInfo>;
-  abstract usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo>;
+  abstract useradd(options: UseraddOptions): Promise<SNFSUserInfo>;
+  abstract usermod(userno: string, options: UsermodOptions): Promise<SNFSUserInfo>;
   abstract userdel(userno: string): Promise<SNFSUserDel>;
   abstract userlist(): Promise<SNFSUserInfo[]>;
 
@@ -97,7 +97,15 @@ export interface SNFSUserInfo {
   union: SNFSFileSystemAccess[];
 }
 
-export interface SNFSUserOptions {
+export interface UseraddOptions {
+  name: string;
+  password: string;
+  admin?: boolean;
+  fs?: string | null;
+  union?: string[];
+}
+
+export interface UsermodOptions {
   name?: string;
   password?: string;
   admin?: boolean;

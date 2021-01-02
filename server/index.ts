@@ -183,10 +183,10 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
     if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
-    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+    if (typeof options.name !== 'string') {
       throw new SNFSError('options.name must be a string.');
     }
-    if (typeof options.password !== 'undefined' && typeof options.password !== 'string') {
+    if (typeof options.password !== 'string') {
       throw new SNFSError('options.password must be a string.');
     }
     if (typeof options.admin !== 'undefined' && typeof options.admin !== 'boolean') {
@@ -206,8 +206,8 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
       }
     }
     const use_options = {
-      name: options.name as string | undefined,
-      password: options.password as string | undefined,
+      name: options.name as string,
+      password: options.password as string,
       admin: options.admin as boolean | undefined,
       fs: options.fs as string | undefined,
       union: typeof options.union == 'undefined' ? undefined : options.union.map((u: any) => u as string),

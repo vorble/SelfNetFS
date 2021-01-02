@@ -1,6 +1,8 @@
 import {
   FsaddOptions,
   FsmodOptions,
+  UseraddOptions,
+  UsermodOptions,
   SNFS,
   SNFSError,
   SNFSFileSystem,
@@ -23,7 +25,6 @@ import {
   SNFSUnlink,
   SNFSUserDel,
   SNFSUserInfo,
-  SNFSUserOptions,
   SNFSWriteFile,
   SNFSWriteFileOptions,
 } from './snfs';
@@ -255,16 +256,10 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve({});
   }
 
-  useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  useradd(options: UseraddOptions): Promise<SNFSUserInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
-    }
-    if (typeof options.name === 'undefined') {
-      throw new SNFSError('Option `name` is required.');
-    }
-    if (typeof options.password === 'undefined') {
-      throw new SNFSError('Option `password` is required.');
     }
     if (this._snfs._users.find(u => u.name == options.name)) {
       throw new SNFSError('User already exists.');
@@ -312,7 +307,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(userRecordToUserInfo(user));
   }
 
-  usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  usermod(userno: string, options: UsermodOptions): Promise<SNFSUserInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');

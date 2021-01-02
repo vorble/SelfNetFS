@@ -1,6 +1,8 @@
 import {
   FsaddOptions,
   FsmodOptions,
+  UseraddOptions,
+  UsermodOptions,
   SNFS,
   SNFSError,
   SNFSFileSystem,
@@ -22,7 +24,6 @@ import {
   SNFSUnlink,
   SNFSUserDel,
   SNFSUserInfo,
-  SNFSUserOptions,
   SNFSWriteFile,
   SNFSWriteFileOptions,
 } from '../lib/snfs';
@@ -146,14 +147,14 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async useradd(options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  async useradd(options: UseraddOptions): Promise<SNFSUserInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'useradd'), {
       options,
     });
     return result;
   }
 
-  async usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo> {
+  async usermod(userno: string, options: UsermodOptions): Promise<SNFSUserInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'usermod'), {
       userno,
       options,
