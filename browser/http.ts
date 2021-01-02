@@ -13,7 +13,7 @@ import {
   FileSystemDetail,
   FileSystemInfo,
   LogoutResult,
-  SNFSMove,
+  MoveResult,
   SNFSNodeKind,
   ReaddirResult,
   SNFSReadFile,
@@ -304,7 +304,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     return result;
   }
 
-  async move(path: string, newpath: string): Promise<SNFSMove> {
+  async move(path: string, newpath: string): Promise<MoveResult> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'move'), {
       fs_token: this._fs_token,
       path,

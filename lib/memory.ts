@@ -14,7 +14,7 @@ import {
   FileSystemDetail,
   FileSystemInfo,
   LogoutResult,
-  SNFSMove,
+  MoveResult,
   SNFSNodeKind,
   ReaddirResult,
   SNFSReadFile,
@@ -771,7 +771,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return Promise.resolve(this._unlink(path));
   }
 
-  _move(path: string, newpath: string): SNFSMove {
+  _move(path: string, newpath: string): MoveResult {
     path = pathnormforfile(path);
     newpath = pathnormforfile(newpath);
     if (newpath.length > this._limits.max_path) {
@@ -797,7 +797,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return {};
   }
 
-  move(path: string, newpath: string): Promise<SNFSMove> {
+  move(path: string, newpath: string): Promise<MoveResult> {
     return Promise.resolve(this._move(path, newpath));
   }
 }
@@ -969,7 +969,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     throw error;
   }
 
-  move(path: string, newpath: string): Promise<SNFSMove> {
+  move(path: string, newpath: string): Promise<MoveResult> {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');

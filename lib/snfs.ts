@@ -34,7 +34,7 @@ export abstract class SNFSFileSystem {
   abstract writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
   abstract readfile(path: string): Promise<SNFSReadFile>;
   abstract unlink(path: string): Promise<SNFSUnlink>;
-  abstract move(path: string, newpath: string): Promise<SNFSMove>;
+  abstract move(path: string, newpath: string): Promise<MoveResult>;
 }
 
 export interface SessionInfo {
@@ -190,5 +190,5 @@ export interface SNFSReadFile {
 export interface SNFSUnlink {
 }
 
-export interface SNFSMove {
+export interface MoveResult {
 }
