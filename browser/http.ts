@@ -14,7 +14,6 @@ import {
   FileSystemInfo,
   LogoutResult,
   MoveResult,
-  SNFSNodeKind,
   ReaddirResult,
   ReadfileResult,
   SNFSSession,

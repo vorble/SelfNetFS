@@ -148,14 +148,14 @@ export interface FsmodOptions {
 export interface FsdelResult {
 }
 
-export enum SNFSNodeKind {
+export enum NodeKind {
   File = 'file',
   Directory = 'dir',
 }
 
 export interface ReaddirResult {
   name: string;
-  kind: SNFSNodeKind;
+  kind: NodeKind;
   // Below only for files.
   ino?: string; // uuid, like inode number in other file systems
   ctime?: Date;
@@ -166,7 +166,7 @@ export interface ReaddirResult {
 
 export interface StatResult {
   name: string;
-  kind: SNFSNodeKind;
+  kind: NodeKind;
   ino: string; // uuid, like inode number in other file systems
   ctime: Date;
   mtime: Date;

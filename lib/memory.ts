@@ -15,7 +15,7 @@ import {
   FileSystemInfo,
   LogoutResult,
   MoveResult,
-  SNFSNodeKind,
+  NodeKind,
   ReaddirResult,
   ReadfileResult,
   SNFSSession,
@@ -635,7 +635,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
           // for a duplicate.
           result.push({
             name: restparts[0],
-            kind: SNFSNodeKind.File,
+            kind: NodeKind.File,
             ino: f.ino,
             ctime: f.ctime,
             mtime: f.mtime,
@@ -644,11 +644,11 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
           });
         } else {
           // It's a directory. There may be more than one, so check for duplicates.
-          const existing = result.find(r => r.name == restparts[0] && r.kind == SNFSNodeKind.Directory);
+          const existing = result.find(r => r.name == restparts[0] && r.kind == NodeKind.Directory);
           if (existing == null) {
             result.push({
               name: restparts[0],
-              kind: SNFSNodeKind.Directory,
+              kind: NodeKind.Directory,
             });
           }
         }
@@ -676,7 +676,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     }
     return {
       name: path,
-      kind: SNFSNodeKind.File,
+      kind: NodeKind.File,
       ino: f.ino,
       ctime: f.ctime,
       mtime: f.mtime,
