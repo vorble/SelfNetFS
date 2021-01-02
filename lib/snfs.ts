@@ -1,7 +1,7 @@
 export class SNFSError extends Error {}
 
 export abstract class SNFS {
-  abstract login(options: SNFSAuthCredentials): Promise<SNFSSession>;
+  abstract login(options: LoginOptions): Promise<SNFSSession>;
   abstract resume(session_token: string): Promise<SNFSSession>;
 }
 
@@ -78,8 +78,8 @@ export interface SNFSFileSystemUsage {
 }
 
 // Each SNFS sub-class might need its own type of credentials, so this class is just a place
-// holder. For now, assume it holds your selfnetfs server URL, username, and password.
-interface SNFSAuthCredentials {}
+// holder. For now, assume it holds your selfnetfs username and password.
+interface LoginOptions {}
 
 export interface FsgetOptions {
   writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.

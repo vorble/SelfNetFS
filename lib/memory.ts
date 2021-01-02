@@ -175,7 +175,7 @@ export class SNFSMemory extends SNFS {
     return this._users.find(u => u.userno == userno) || null;
   }
 
-  login(options: SNFSAuthCredentialsMemory): Promise<SNFSSession> {
+  login(options: LoginOptionsMemory): Promise<SNFSSession> {
     let reject = false;
     let user = null;
     for (let i = 0; i < this._users.length; ++i) {
@@ -1004,7 +1004,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
   }
 }
 
-export interface SNFSAuthCredentialsMemory {
+export interface LoginOptionsMemory {
   name: string;
   password: string;
 }

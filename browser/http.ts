@@ -32,7 +32,7 @@ import {
   base64ToBuffer,
 } from './buffer';
 
-export interface SNFSAuthCredentialsHttp {
+export interface LoginOptionsHttp {
   name: string;
   password: string;
 }
@@ -83,7 +83,7 @@ export class SNFSHttp extends SNFS {
     this._api_root = api_root;
   }
 
-  async login(options: SNFSAuthCredentialsHttp): Promise<SNFSSession> {
+  async login(options: LoginOptionsHttp): Promise<SNFSSession> {
     const result = await apirequest(urljoin(this._api_root, 'login'), {
       name: options.name,
       password: options.password,
