@@ -23,7 +23,7 @@ import {
   SessionInfo,
   SNFSStat,
   SNFSUnlink,
-  SNFSUserDel,
+  UserdelResult,
   UserInfo,
   SNFSWriteFile,
   SNFSWriteFileOptions,
@@ -363,7 +363,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
-  userdel(userno: string): Promise<SNFSUserDel> {
+  userdel(userno: string): Promise<UserdelResult> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');

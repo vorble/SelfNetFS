@@ -13,7 +13,7 @@ export abstract class SNFSSession {
 
   abstract useradd(options: UseraddOptions): Promise<UserInfo>;
   abstract usermod(userno: string, options: UsermodOptions): Promise<UserInfo>;
-  abstract userdel(userno: string): Promise<SNFSUserDel>;
+  abstract userdel(userno: string): Promise<UserdelResult>;
   abstract userlist(): Promise<UserInfo[]>;
 
   abstract fs(): Promise<SNFSFileSystem>;
@@ -113,7 +113,7 @@ export interface UsermodOptions {
   union?: string[];
 }
 
-export interface SNFSUserDel {
+export interface UserdelResult {
 }
 
 export interface SNFSFileSystemAccess {

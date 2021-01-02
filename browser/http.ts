@@ -22,7 +22,7 @@ import {
   SessionInfo,
   SNFSStat,
   SNFSUnlink,
-  SNFSUserDel,
+  UserdelResult,
   UserInfo,
   SNFSWriteFile,
   SNFSWriteFileOptions,
@@ -162,7 +162,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async userdel(userno: string): Promise<SNFSUserDel> {
+  async userdel(userno: string): Promise<UserdelResult> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'userdel'), {
       userno,
     });
