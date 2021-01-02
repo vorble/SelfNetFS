@@ -93,8 +93,8 @@ export interface UserInfo {
   userno: string;
   name: string;
   admin: boolean;
-  fs: SNFSFileSystemAccess | null;
-  union: SNFSFileSystemAccess[];
+  fs: FSAccess | null;
+  union: FSAccess[];
 }
 
 export interface UseraddOptions {
@@ -116,7 +116,7 @@ export interface UsermodOptions {
 export interface UserdelResult {
 }
 
-export interface SNFSFileSystemAccess {
+export interface FSAccess {
   name: string;
   fsno: string;
   writeable: boolean;
