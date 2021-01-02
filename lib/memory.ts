@@ -12,7 +12,7 @@ import {
   FSInfo,
   SNFSFileSystemLimits,
   SNFSFileSystemSessionDetail,
-  SNFSFileSystemSessionInfo,
+  FileSystemInfo,
   SNFSLogout,
   SNFSMove,
   SNFSNodeKind,
@@ -602,7 +602,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     });
   }
 
-  info(): SNFSFileSystemSessionInfo {
+  info(): FileSystemInfo {
     return {
       fs_token: JSON.stringify({ fsno: this._fsno, union: [], writeable: true }),
       fsno: this._fsno,
@@ -843,7 +843,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     }
   }
 
-  info(): SNFSFileSystemSessionInfo {
+  info(): FileSystemInfo {
     return {
       fs_token: JSON.stringify({ fsno: this._fsno, union: this._union.map(ufs => ufs._fsno), writeable: this._writeable }),
       fsno: this._fsno,

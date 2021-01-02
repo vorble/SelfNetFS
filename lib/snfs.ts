@@ -26,7 +26,7 @@ export abstract class SNFSSession {
 }
 
 export abstract class SNFSFileSystem {
-  abstract info(): SNFSFileSystemSessionInfo;
+  abstract info(): FileSystemInfo;
   abstract detail(): Promise<SNFSFileSystemSessionDetail>;
 
   abstract readdir(path: string): Promise<SNFSReadDir[]>;
@@ -47,7 +47,7 @@ export interface SessionDetail {
   user: UserInfo;
 }
 
-export interface SNFSFileSystemSessionInfo {
+export interface FileSystemInfo {
   fs_token: string;
   fsno: string;
   union: string[];

@@ -11,7 +11,7 @@ import {
   FSInfo,
   SNFSFileSystemLimits,
   SNFSFileSystemSessionDetail,
-  SNFSFileSystemSessionInfo,
+  FileSystemInfo,
   SNFSLogout,
   SNFSMove,
   SNFSNodeKind,
@@ -244,7 +244,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     this._union = union.slice();
   }
 
-  info(): SNFSFileSystemSessionInfo {
+  info(): FileSystemInfo {
     return {
       fs_token: this._fs_token,
       fsno: this._fsno,
