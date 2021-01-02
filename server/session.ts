@@ -1,7 +1,6 @@
 import {
   SNFS,
   SNFSError,
-  SNFSFileSystem,
   SNFSSession,
 } from '../lib/snfs';
 import {

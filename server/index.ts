@@ -9,7 +9,7 @@ import {
 import {
   SNFSError,
   SNFSSession,
-  SNFSFileSystem,
+  FileSystem,
 } from '../lib/snfs';
 import { SNFSPasswordModuleHash } from './password';
 import Persist from './persist';
@@ -339,7 +339,7 @@ app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, nex
 app.options('/:owner/:pool/fsresume', (req, res) => { res.end(); });
 app.post('/:owner/:pool/fsresume', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     res.locals.finish(fs.info());
   } catch (err) {
     next(err);
@@ -448,7 +448,7 @@ app.post('/:owner/:pool/fslist', lookupOwner, lookupSession, async (req, res, ne
 app.options('/:owner/:pool/fsdetail', (req, res) => { res.end(); });
 app.post('/:owner/:pool/fsdetail', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     res.locals.finish(await fs.detail());
   } catch (err) {
     next(err);
@@ -458,7 +458,7 @@ app.post('/:owner/:pool/fsdetail', lookupOwner, lookupSession, lookupFileSystem,
 app.options('/:owner/:pool/readdir', (req, res) => { res.end(); });
 app.post('/:owner/:pool/readdir', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -472,7 +472,7 @@ app.post('/:owner/:pool/readdir', lookupOwner, lookupSession, lookupFileSystem, 
 app.options('/:owner/:pool/stat', (req, res) => { res.end(); });
 app.post('/:owner/:pool/stat', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -491,7 +491,7 @@ app.post('/:owner/:pool/stat', lookupOwner, lookupSession, lookupFileSystem, asy
 app.options('/:owner/:pool/writefile', (req, res) => { res.end(); });
 app.post('/:owner/:pool/writefile', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path, data, options } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -516,7 +516,7 @@ app.post('/:owner/:pool/writefile', lookupOwner, lookupSession, lookupFileSystem
 app.options('/:owner/:pool/readfile', (req, res) => { res.end(); });
 app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -534,7 +534,7 @@ app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem,
 app.options('/:owner/:pool/unlink', (req, res) => { res.end(); });
 app.post('/:owner/:pool/unlink', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -548,7 +548,7 @@ app.post('/:owner/:pool/unlink', lookupOwner, lookupSession, lookupFileSystem, a
 app.options('/:owner/:pool/move', (req, res, next) => { res.end(); });
 app.post('/:owner/:pool/move', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path, newpath } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');

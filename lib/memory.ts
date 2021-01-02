@@ -5,7 +5,7 @@ import {
   UsermodOptions,
   SNFS,
   SNFSError,
-  SNFSFileSystem,
+  FileSystem,
   FsdelResult,
   FSDetail,
   FsgetOptions,
@@ -108,7 +108,7 @@ function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallbac
   return limits;
 }
 
-function fileSystemToInfo(fs: SNFSFileSystemMemory): FSInfo {
+function fileSystemToInfo(fs: FileSystemMemory): FSInfo {
   return {
     name: fs._name,
     fsno: fs._fsno,
@@ -116,7 +116,7 @@ function fileSystemToInfo(fs: SNFSFileSystemMemory): FSInfo {
   };
 }
 
-function fileSystemToDetail(fs: SNFSFileSystemMemory): FSDetail {
+function fileSystemToDetail(fs: FileSystemMemory): FSDetail {
   return {
     name: fs._name,
     fsno: fs._fsno,
@@ -131,7 +131,7 @@ function fileSystemToDetail(fs: SNFSFileSystemMemory): FSDetail {
 export class SNFSMemory extends SNFS {
   _uuidgen: () => string;
   _password_module: SNFSPasswordModule;
-  _fss: SNFSFileSystemMemory[];
+  _fss: FileSystemMemory[];
   _users: UserRecord[];
 
   constructor(uuidgen: () => string, password_module: SNFSPasswordModule) {
@@ -158,7 +158,7 @@ export class SNFSMemory extends SNFS {
     if (this._fss.length != 0 || this._users.length != 0) {
       throw new SNFSError('Too late to bootstrap.');
     }
-    const fs = new SNFSFileSystemMemory('default', this._uuidgen_unique_fsno(), LIMITS, this._uuidgen);
+    const fs = new FileSystemMemory('default', this._uuidgen_unique_fsno(), LIMITS, this._uuidgen);
     const user = {
       userno: this._uuidgen_unique_userno(),
       name: name,
@@ -388,17 +388,17 @@ export class SNFSSessionMemory extends SNFSSession {
     }
   }
 
-  fs(): Promise<SNFSFileSystem> {
+  fs(): Promise<FileSystem> {
     const logged_in_user = this._lookup_user();
     const fs = logged_in_user.fs;
     if (fs == null) {
       throw new SNFSError('User has no FS.');
     }
     const writeable = true; // File system is writeable by virtue of being assigned the the user.
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
+    return Promise.resolve(new FileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
-  fsget(fsno: string, options?: FsgetOptions): Promise<SNFSFileSystem> {
+  fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem> {
     options = { ...options };
     if (options.union == null) {
       options.union = [];
@@ -431,10 +431,10 @@ export class SNFSSessionMemory extends SNFSSession {
       }
       union.push(ufs);
     }
-    return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
+    return Promise.resolve(new FileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
-  fsresume(fs_token: string): Promise<SNFSFileSystem> {
+  fsresume(fs_token: string): Promise<FileSystem> {
     let tok = null;
     try {
       tok = JSON.parse(fs_token);
@@ -472,7 +472,7 @@ export class SNFSSessionMemory extends SNFSSession {
     }
     const limits = fileSystemOptionsToLimits(options, LIMITS);
     let fsno = this._snfs._uuidgen_unique_fsno();
-    const fs = new SNFSFileSystemMemory(options.name, fsno, limits, this._snfs._uuidgen);
+    const fs = new FileSystemMemory(options.name, fsno, limits, this._snfs._uuidgen);
     this._snfs._fss.push(fs);
     return Promise.resolve(fileSystemToInfo(fs));
   }
@@ -572,7 +572,7 @@ function pathnormfordir(path: string) {
   return path;
 }
 
-export class SNFSFileSystemMemory extends SNFSFileSystem {
+export class FileSystemMemory extends FileSystem {
   _name: string;
   _fsno: string;
   _limits: FSLimits;
@@ -681,7 +681,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
       ctime: f.ctime,
       mtime: f.mtime,
       size: f.data.length,
-      writeable: true, // Non-writeability is handled by SNFSFileSystemMemoryUnion
+      writeable: true, // Non-writeability is handled by FileSystemMemoryUnion
     };
   }
 
@@ -802,14 +802,14 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
   }
 }
 
-class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
-  _fs: SNFSFileSystemMemory;
-  _union: SNFSFileSystemMemory[];
+class FileSystemMemoryUnion extends FileSystemMemory {
+  _fs: FileSystemMemory;
+  _union: FileSystemMemory[];
   _writeable: boolean;
   _userno: string;
   _snfs: SNFSMemory;
 
-  constructor(fs: SNFSFileSystemMemory, union: SNFSFileSystemMemory[], writeable: boolean, uuidgen: () => string, user: UserRecord, snfs: SNFSMemory) {
+  constructor(fs: FileSystemMemory, union: FileSystemMemory[], writeable: boolean, uuidgen: () => string, user: UserRecord, snfs: SNFSMemory) {
     super(fs._name, fs._fsno, fs._limits, uuidgen);
 
     this._fs = fs;
@@ -1014,8 +1014,8 @@ interface UserRecord {
   name: string;
   password: string;
   admin: boolean;
-  fs: SNFSFileSystemMemory | null;
-  union: SNFSFileSystemMemory[];
+  fs: FileSystemMemory | null;
+  union: FileSystemMemory[];
 }
 
 interface SNFSFileMemory {

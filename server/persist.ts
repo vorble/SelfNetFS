@@ -6,7 +6,7 @@ import {
   FSLimits,
 } from '../lib/snfs';
 import {
-  SNFSFileSystemMemory,
+  FileSystemMemory,
   SNFSMemory,
 } from '../lib/memory';
 
@@ -61,7 +61,7 @@ function parse(dump: string, snfs: SNFSMemory): void {
 }
 
 interface SNFSMemoryDump {
-  fss: SNFSFileSystemMemoryDump[];
+  fss: FileSystemMemoryDump[];
   users: UserRecordDump[];
 }
 function dumpSNFSMemory(snfs: SNFSMemory): SNFSMemoryDump {
@@ -70,25 +70,25 @@ function dumpSNFSMemory(snfs: SNFSMemory): SNFSMemoryDump {
     users.push(dumpUserRecord(user));
   }
   return {
-    fss: snfs._fss.map(dumpSNFSFileSystemMemory),
+    fss: snfs._fss.map(dumpFileSystemMemory),
     users,
   };
 }
 function loadSNFSMemory(obj: any, snfs: SNFSMemory) {
   snfs._fss.length = 0;
-  const fss = obj.fss.map((fs: any) => loadSNFSFileSystemMemory(fs, snfs));
+  const fss = obj.fss.map((fs: any) => loadFileSystemMemory(fs, snfs));
   snfs._fss = fss;
   const users = obj.users.map((user: any) => loadUserRecord(user, snfs));
   snfs._users = users;
 }
 
-interface SNFSFileSystemMemoryDump {
+interface FileSystemMemoryDump {
   name: string;
   fsno: string;
   limits: FSLimits;
   files: SNFSFileMemoryDump[];
 }
-function dumpSNFSFileSystemMemory(fs: SNFSFileSystemMemory): SNFSFileSystemMemoryDump {
+function dumpFileSystemMemory(fs: FileSystemMemory): FileSystemMemoryDump {
   const files = [];
   for (const file of fs._files.values()) {
     files.push(dumpSNFSFileMemory(file));
@@ -100,8 +100,8 @@ function dumpSNFSFileSystemMemory(fs: SNFSFileSystemMemory): SNFSFileSystemMemor
     files,
   };
 }
-function loadSNFSFileSystemMemory(fs: any, snfs: SNFSMemory): SNFSFileSystemMemory {
-  const result = new SNFSFileSystemMemory(fs.name, fs.fsno, fs.limits, snfs._uuidgen);
+function loadFileSystemMemory(fs: any, snfs: SNFSMemory): FileSystemMemory {
+  const result = new FileSystemMemory(fs.name, fs.fsno, fs.limits, snfs._uuidgen);
   for (const file of fs.files) {
     const f = loadSNFSFileMemory(file);
     result._files.set(f.name, f);
@@ -154,8 +154,8 @@ interface UserRecord {
   name: string;
   password: string;
   admin: boolean;
-  fs: SNFSFileSystemMemory | null;
-  union: SNFSFileSystemMemory[];
+  fs: FileSystemMemory | null;
+  union: FileSystemMemory[];
 }
 interface UserRecordDump {
   userno: string;
@@ -176,7 +176,7 @@ function dumpUserRecord(user: UserRecord): UserRecordDump {
   };
 }
 function loadUserRecord(user: any, snfs: SNFSMemory): UserRecord {
-  function lookupFS(fsno: string): SNFSFileSystemMemory {
+  function lookupFS(fsno: string): FileSystemMemory {
     const fs = snfs._fss.find(fs => fs._fsno == fsno);
     if (fs == null) {
       throw new SNFSError('File system not found.');

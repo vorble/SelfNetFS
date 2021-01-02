@@ -5,7 +5,7 @@ import {
   UsermodOptions,
   SNFS,
   SNFSError,
-  SNFSFileSystem,
+  FileSystem,
   FsdelResult,
   FsgetOptions,
   FSInfo,
@@ -174,25 +174,25 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async fs(): Promise<SNFSFileSystem> {
+  async fs(): Promise<FileSystem> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fs'), {
     });
-    return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
+    return new FileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
   }
 
-  async fsget(fsno: string, options?: FsgetOptions): Promise<SNFSFileSystem> {
+  async fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsget'), {
       fsno,
       options,
     });
-    return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
+    return new FileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
   }
 
-  async fsresume(fs_token: string): Promise<SNFSFileSystem> {
+  async fsresume(fs_token: string): Promise<FileSystem> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsresume'), {
       fs_token,
     });
-    return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, fs_token, result.fsno, result.union);
+    return new FileSystemHttp(this._snfs, this._api_root, this.pool, fs_token, result.fsno, result.union);
   }
 
   async fsadd(options: FsaddOptions): Promise<FSInfo> {
@@ -224,7 +224,7 @@ export class SNFSSessionHttp extends SNFSSession {
   }
 }
 
-export class SNFSFileSystemHttp extends SNFSFileSystem {
+export class FileSystemHttp extends FileSystem {
   _snfs: SNFSHttp;
   _api_root: string;
   _pool: string;

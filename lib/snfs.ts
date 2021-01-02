@@ -16,16 +16,16 @@ export abstract class SNFSSession {
   abstract userdel(userno: string): Promise<UserdelResult>;
   abstract userlist(): Promise<UserInfo[]>;
 
-  abstract fs(): Promise<SNFSFileSystem>;
-  abstract fsget(fsno: string, options?: FsgetOptions): Promise<SNFSFileSystem>;
-  abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
+  abstract fs(): Promise<FileSystem>;
+  abstract fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem>;
+  abstract fsresume(fs_token: string): Promise<FileSystem>;
   abstract fsadd(options: FsaddOptions): Promise<FSInfo>;
   abstract fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo>;
   abstract fsdel(fsno: string): Promise<FsdelResult>;
   abstract fslist(): Promise<FSInfo[]>;
 }
 
-export abstract class SNFSFileSystem {
+export abstract class FileSystem {
   abstract info(): FileSystemInfo;
   abstract detail(): Promise<FileSystemDetail>;
 
@@ -69,10 +69,10 @@ export interface FSDetail {
   name: string;
   fsno: string;
   limits: FSLimits;
-  usage: SNFSFileSystemUsage;
+  usage: FileSystemUsage;
 }
 
-export interface SNFSFileSystemUsage {
+export interface FileSystemUsage {
   no_files: number;
   bytes_used: number; // BigInt maybe?
 }
