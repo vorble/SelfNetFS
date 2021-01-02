@@ -16,7 +16,7 @@ import {
   SNFSReadDir,
   SNFSReadFile,
   SNFSSession,
-  SNFSSessionDetail,
+  SessionDetail,
   SessionInfo,
   SNFSStat,
   SNFSUnlink,
@@ -134,7 +134,7 @@ export class SNFSSessionHttp extends SNFSSession {
     };
   }
 
-  async detail(): Promise<SNFSSessionDetail> {
+  async detail(): Promise<SessionDetail> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'sesdetail'), {
     });
     return result;

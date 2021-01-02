@@ -17,7 +17,7 @@ import {
   SNFSReadDir,
   SNFSReadFile,
   SNFSSession,
-  SNFSSessionDetail,
+  SessionDetail,
   SessionInfo,
   SNFSStat,
   SNFSUnlink,
@@ -242,7 +242,7 @@ export class SNFSSessionMemory extends SNFSSession {
     };
   }
 
-  detail(): Promise<SNFSSessionDetail> {
+  detail(): Promise<SessionDetail> {
     const user = this._lookup_user();
     return Promise.resolve({
       session_token: this._session_token,

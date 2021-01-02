@@ -7,7 +7,7 @@ export abstract class SNFS {
 
 export abstract class SNFSSession {
   abstract info(): SessionInfo;
-  abstract detail(): Promise<SNFSSessionDetail>;
+  abstract detail(): Promise<SessionDetail>;
 
   abstract logout(): Promise<SNFSLogout>;
 
@@ -42,7 +42,7 @@ export interface SessionInfo {
   userno: string;
 }
 
-export interface SNFSSessionDetail {
+export interface SessionDetail {
   session_token: string;
   user: SNFSUserInfo;
 }
