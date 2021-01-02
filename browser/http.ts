@@ -17,7 +17,7 @@ import {
   SNFSReadFile,
   SNFSSession,
   SNFSSessionDetail,
-  SNFSSessionInfo,
+  SessionInfo,
   SNFSStat,
   SNFSUnlink,
   SNFSUserDel,
@@ -125,7 +125,7 @@ export class SNFSSessionHttp extends SNFSSession {
     this.pool = pool;
   }
 
-  info(): SNFSSessionInfo {
+  info(): SessionInfo {
     return {
       session_token: JSON.stringify({
         pool: this.pool,

@@ -6,7 +6,7 @@ export abstract class SNFS {
 }
 
 export abstract class SNFSSession {
-  abstract info(): SNFSSessionInfo;
+  abstract info(): SessionInfo;
   abstract detail(): Promise<SNFSSessionDetail>;
 
   abstract logout(): Promise<SNFSLogout>;
@@ -37,7 +37,7 @@ export abstract class SNFSFileSystem {
   abstract move(path: string, newpath: string): Promise<SNFSMove>;
 }
 
-export interface SNFSSessionInfo {
+export interface SessionInfo {
   session_token: string;
   userno: string;
 }

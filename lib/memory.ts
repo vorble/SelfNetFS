@@ -18,7 +18,7 @@ import {
   SNFSReadFile,
   SNFSSession,
   SNFSSessionDetail,
-  SNFSSessionInfo,
+  SessionInfo,
   SNFSStat,
   SNFSUnlink,
   SNFSUserDel,
@@ -232,7 +232,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return logged_in_user;
   }
 
-  info(): SNFSSessionInfo {
+  info(): SessionInfo {
     if (this._logged_in_userno == null) {
       throw new SNFSError('Not logged in.');
     }
