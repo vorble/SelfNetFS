@@ -69,7 +69,7 @@ async function apirequest(endpoint: string, payload: any) {
   return obj;
 }
 
-export class SNFSHttp extends SNFS {
+export class Http extends SNFS {
   _api_root: string;
 
   constructor(api_root: string) {
@@ -107,12 +107,12 @@ export class SNFSHttp extends SNFS {
 }
 
 export class SessionHttp extends Session {
-  _snfs: SNFSHttp;
+  _snfs: Http;
   _api_root: string;
   _userno: string;
   pool: string;
 
-  constructor(snfs: SNFSHttp, pool: string, userno: string) {
+  constructor(snfs: Http, pool: string, userno: string) {
     super();
 
     this._snfs = snfs;
@@ -221,14 +221,14 @@ export class SessionHttp extends Session {
 }
 
 export class FileSystemHttp extends FileSystem {
-  _snfs: SNFSHttp;
+  _snfs: Http;
   _api_root: string;
   _pool: string;
   _fs_token: string;
   _fsno: string;
   _union: string[];
 
-  constructor(snfs: SNFSHttp, api_root: string, pool: string, fs_token: string, fsno: string, union: string[]) {
+  constructor(snfs: Http, api_root: string, pool: string, fs_token: string, fsno: string, union: string[]) {
     super();
 
     this._snfs = snfs;

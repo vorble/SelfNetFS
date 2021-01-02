@@ -23,7 +23,7 @@
       let ses = null;
       const api_root = localStorage.getItem('snfs_test_api_root') || API_ROOT;
       const session_token = localStorage.getItem('snfs_test_session_token');
-      const snfs = new SNFS.SNFSHttp(api_root);
+      const snfs = new SNFS.Http(api_root);
       try {
         ses = await snfs.resume(session_token);
         console.log('Successfully resumed session.');
