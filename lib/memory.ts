@@ -17,7 +17,7 @@ import {
   MoveResult,
   SNFSNodeKind,
   ReaddirResult,
-  SNFSReadFile,
+  ReadfileResult,
   SNFSSession,
   SessionDetail,
   SessionInfo,
@@ -740,7 +740,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return Promise.resolve(this._writefile(path, data, options));
   }
 
-  _readfile(path: string): SNFSReadFile {
+  _readfile(path: string): ReadfileResult {
     path = pathnormforfile(path);
     const f = this._files.get(path);
     if (f == null) {
@@ -751,7 +751,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     };
   }
 
-  readfile(path: string): Promise<SNFSReadFile> {
+  readfile(path: string): Promise<ReadfileResult> {
     return Promise.resolve(this._readfile(path));
   }
 
@@ -916,7 +916,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     return Promise.resolve(this._fs._writefile(path, data, options));
   }
 
-  readfile(path: string): Promise<SNFSReadFile> {
+  readfile(path: string): Promise<ReadfileResult> {
     this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {

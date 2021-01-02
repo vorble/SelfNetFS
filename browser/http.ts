@@ -16,7 +16,7 @@ import {
   MoveResult,
   SNFSNodeKind,
   ReaddirResult,
-  SNFSReadFile,
+  ReadfileResult,
   SNFSSession,
   SessionDetail,
   SessionInfo,
@@ -287,7 +287,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     return result;
   }
 
-  async readfile(path: string): Promise<SNFSReadFile> {
+  async readfile(path: string): Promise<ReadfileResult> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'readfile'), {
       fs_token: this._fs_token,
       path,
