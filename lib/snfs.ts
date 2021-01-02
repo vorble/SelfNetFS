@@ -69,10 +69,10 @@ export interface FSDetail {
   name: string;
   fsno: string;
   limits: FSLimits;
-  usage: FileSystemUsage;
+  usage: FSUsage;
 }
 
-export interface FileSystemUsage {
+export interface FSUsage {
   no_files: number;
   bytes_used: number; // BigInt maybe?
 }
