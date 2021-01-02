@@ -225,6 +225,27 @@
             const { userno } = await ses.useradd({ name: 'testing', password: 'password', union: [fs.info().fsno] });
             await ses.userdel(userno);
           }
+          {
+            const info = await ses.useradd({ name: 'someone', password: 'password' });
+            if (info.admin) {
+              throw new SNFSError('useradd defaulted new user to admin.');
+            }
+            await ses.userdel(info.userno);
+          }
+          {
+            const info = await ses.useradd({ name: 'someone', password: 'password', admin: false });
+            if (info.admin) {
+              throw new SNFSError('useradd did not create non-admin user.');
+            }
+            await ses.userdel(info.userno);
+          }
+          {
+            const info = await ses.useradd({ name: 'someone', password: 'password', admin: true });
+            if (!info.admin) {
+              throw new SNFSError('useradd did not create admin user.');
+            }
+            await ses.userdel(info.userno);
+          }
         }
 
         // ---------------------------
