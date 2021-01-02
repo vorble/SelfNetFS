@@ -24,7 +24,7 @@ import {
   SNFSUnlink,
   UserdelResult,
   UserInfo,
-  SNFSWriteFile,
+  WritefileResult,
   WritefileOptions,
 } from '../lib/snfs';
 import {
@@ -277,7 +277,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     return result;
   }
 
-  async writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<SNFSWriteFile> {
+  async writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<WritefileResult> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'writefile'), {
       fs_token: this._fs_token,
       path,
