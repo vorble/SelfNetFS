@@ -26,7 +26,7 @@ import {
   UserdelResult,
   UserInfo,
   SNFSWriteFile,
-  SNFSWriteFileOptions,
+  WritefileOptions,
 } from './snfs';
 import {
   SNFSPasswordModule,
@@ -689,7 +689,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return Promise.resolve(this._stat(path));
   }
 
-  _writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): SNFSWriteFile {
+  _writefile(path: string, data: Uint8Array, options?: WritefileOptions): SNFSWriteFile {
     options = { ...options };
     path = pathnormforfile(path);
     if (path.length > this._limits.max_path) {
@@ -736,7 +736,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     };
   }
 
-  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+  writefile(path: string, data: Uint8Array, options: WritefileOptions): Promise<SNFSWriteFile> {
     return Promise.resolve(this._writefile(path, data, options));
   }
 
@@ -908,7 +908,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     throw errors[0];
   }
 
-  writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile> {
+  writefile(path: string, data: Uint8Array, options: WritefileOptions): Promise<SNFSWriteFile> {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');

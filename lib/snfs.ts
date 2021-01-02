@@ -31,7 +31,7 @@ export abstract class SNFSFileSystem {
 
   abstract readdir(path: string): Promise<ReaddirResult[]>;
   abstract stat(path: string): Promise<StatResult>;
-  abstract writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
+  abstract writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<SNFSWriteFile>;
   abstract readfile(path: string): Promise<SNFSReadFile>;
   abstract unlink(path: string): Promise<SNFSUnlink>;
   abstract move(path: string, newpath: string): Promise<MoveResult>;
@@ -174,7 +174,7 @@ export interface StatResult {
   writeable: boolean;
 }
 
-export interface SNFSWriteFileOptions {
+export interface WritefileOptions {
   // To preserve the ino of the file. Default is to not preserve.
   truncate?: boolean;
 }
