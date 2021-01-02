@@ -16,7 +16,7 @@ import {
   LogoutResult,
   SNFSMove,
   SNFSNodeKind,
-  SNFSReadDir,
+  ReaddirResult,
   SNFSReadFile,
   SNFSSession,
   SessionDetail,
@@ -618,10 +618,10 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     });
   }
 
-  _readdir(path: string): SNFSReadDir[] {
+  _readdir(path: string): ReaddirResult[] {
     path = pathnormfordir(path);
     // Use the fact that path ends with a / to help with the search for files.
-    const result: SNFSReadDir[] = [];
+    const result: ReaddirResult[] = [];
     for (const [p, f] of this._files.entries()) {
       // e.g. path = '/some/place/' and p = '/some/place/to/call/home'
       if (p.indexOf(path) == 0) {
@@ -664,7 +664,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return result;
   }
 
-  readdir(path: string): Promise<SNFSReadDir[]> {
+  readdir(path: string): Promise<ReaddirResult[]> {
     return Promise.resolve(this._readdir(path));
   }
 
@@ -859,7 +859,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     });
   }
 
-  readdir(path: string): Promise<SNFSReadDir[]> {
+  readdir(path: string): Promise<ReaddirResult[]> {
     this._check_access();
     const result = this._fs._readdir(path);
     if (!this._writeable) {

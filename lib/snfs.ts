@@ -29,7 +29,7 @@ export abstract class SNFSFileSystem {
   abstract info(): FileSystemInfo;
   abstract detail(): Promise<FileSystemDetail>;
 
-  abstract readdir(path: string): Promise<SNFSReadDir[]>;
+  abstract readdir(path: string): Promise<ReaddirResult[]>;
   abstract stat(path: string): Promise<SNFSStat>;
   abstract writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
   abstract readfile(path: string): Promise<SNFSReadFile>;
@@ -153,7 +153,7 @@ export enum SNFSNodeKind {
   Directory = 'dir',
 }
 
-export interface SNFSReadDir {
+export interface ReaddirResult {
   name: string;
   kind: SNFSNodeKind;
   // Below only for files.
