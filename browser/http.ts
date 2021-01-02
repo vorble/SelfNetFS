@@ -23,7 +23,7 @@ import {
   SNFSStat,
   SNFSUnlink,
   SNFSUserDel,
-  SNFSUserInfo,
+  UserInfo,
   SNFSWriteFile,
   SNFSWriteFileOptions,
 } from '../lib/snfs';
@@ -147,14 +147,14 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async useradd(options: UseraddOptions): Promise<SNFSUserInfo> {
+  async useradd(options: UseraddOptions): Promise<UserInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'useradd'), {
       options,
     });
     return result;
   }
 
-  async usermod(userno: string, options: UsermodOptions): Promise<SNFSUserInfo> {
+  async usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'usermod'), {
       userno,
       options,
@@ -169,7 +169,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async userlist(): Promise<SNFSUserInfo[]> {
+  async userlist(): Promise<UserInfo[]> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'userlist'), {
     });
     return result;

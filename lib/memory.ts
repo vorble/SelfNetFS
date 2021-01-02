@@ -24,7 +24,7 @@ import {
   SNFSStat,
   SNFSUnlink,
   SNFSUserDel,
-  SNFSUserInfo,
+  UserInfo,
   SNFSWriteFile,
   SNFSWriteFileOptions,
 } from './snfs';
@@ -51,7 +51,7 @@ function uuidgen_unique(uuidgen: () => string, isduplicate: (arg0: string) => bo
   throw new SNFSError('Too many UUID collissions.');
 }
 
-function userRecordToUserInfo(user: UserRecord): SNFSUserInfo {
+function userRecordToUserInfo(user: UserRecord): UserInfo {
   return {
     userno: user.userno,
     name: user.name,
@@ -256,7 +256,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve({});
   }
 
-  useradd(options: UseraddOptions): Promise<SNFSUserInfo> {
+  useradd(options: UseraddOptions): Promise<UserInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -307,7 +307,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(userRecordToUserInfo(user));
   }
 
-  usermod(userno: string, options: UsermodOptions): Promise<SNFSUserInfo> {
+  usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -379,7 +379,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve({});
   }
 
-  userlist(): Promise<SNFSUserInfo[]> {
+  userlist(): Promise<UserInfo[]> {
     const logged_in_user = this._lookup_user();
     if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._users.map(userRecordToUserInfo));

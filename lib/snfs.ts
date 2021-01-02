@@ -11,10 +11,10 @@ export abstract class SNFSSession {
 
   abstract logout(): Promise<SNFSLogout>;
 
-  abstract useradd(options: UseraddOptions): Promise<SNFSUserInfo>;
-  abstract usermod(userno: string, options: UsermodOptions): Promise<SNFSUserInfo>;
+  abstract useradd(options: UseraddOptions): Promise<UserInfo>;
+  abstract usermod(userno: string, options: UsermodOptions): Promise<UserInfo>;
   abstract userdel(userno: string): Promise<SNFSUserDel>;
-  abstract userlist(): Promise<SNFSUserInfo[]>;
+  abstract userlist(): Promise<UserInfo[]>;
 
   abstract fs(): Promise<SNFSFileSystem>;
   abstract fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
@@ -44,7 +44,7 @@ export interface SessionInfo {
 
 export interface SessionDetail {
   session_token: string;
-  user: SNFSUserInfo;
+  user: UserInfo;
 }
 
 export interface SNFSFileSystemSessionInfo {
@@ -89,7 +89,7 @@ export interface SNFSFileSystemGetOptions {
 export interface SNFSLogout {
 }
 
-export interface SNFSUserInfo {
+export interface UserInfo {
   userno: string;
   name: string;
   admin: boolean;
