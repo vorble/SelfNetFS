@@ -13,7 +13,7 @@ import {
   SNFSFileSystemLimits,
   FileSystemDetail,
   FileSystemInfo,
-  SNFSLogout,
+  LogoutResult,
   SNFSMove,
   SNFSNodeKind,
   SNFSReadDir,
@@ -251,7 +251,7 @@ export class SNFSSessionMemory extends SNFSSession {
     });
   }
 
-  logout(): Promise<SNFSLogout> {
+  logout(): Promise<LogoutResult> {
     this._logged_in_userno = null;
     return Promise.resolve({});
   }

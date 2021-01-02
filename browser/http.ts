@@ -12,7 +12,7 @@ import {
   SNFSFileSystemLimits,
   FileSystemDetail,
   FileSystemInfo,
-  SNFSLogout,
+  LogoutResult,
   SNFSMove,
   SNFSNodeKind,
   SNFSReadDir,
@@ -141,7 +141,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async logout(): Promise<SNFSLogout> {
+  async logout(): Promise<LogoutResult> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'logout'), {
     });
     return result;

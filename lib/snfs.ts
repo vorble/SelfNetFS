@@ -9,7 +9,7 @@ export abstract class SNFSSession {
   abstract info(): SessionInfo;
   abstract detail(): Promise<SessionDetail>;
 
-  abstract logout(): Promise<SNFSLogout>;
+  abstract logout(): Promise<LogoutResult>;
 
   abstract useradd(options: UseraddOptions): Promise<UserInfo>;
   abstract usermod(userno: string, options: UsermodOptions): Promise<UserInfo>;
@@ -86,7 +86,7 @@ export interface FsgetOptions {
   union?: string[]; // Array of fsno
 }
 
-export interface SNFSLogout {
+export interface LogoutResult {
 }
 
 export interface UserInfo {
