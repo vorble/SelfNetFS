@@ -6,7 +6,7 @@ import {
   SNFS,
   SNFSError,
   SNFSFileSystem,
-  SNFSFileSystemDel,
+  FsdelResult,
   FsgetOptions,
   FSInfo,
   SNFSFileSystemLimits,
@@ -211,7 +211,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async fsdel(fsno: string): Promise<SNFSFileSystemDel> {
+  async fsdel(fsno: string): Promise<FsdelResult> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsdel'), {
       fsno,
     });

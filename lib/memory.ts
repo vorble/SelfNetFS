@@ -6,7 +6,7 @@ import {
   SNFS,
   SNFSError,
   SNFSFileSystem,
-  SNFSFileSystemDel,
+  FsdelResult,
   FSDetail,
   FsgetOptions,
   FSInfo,
@@ -500,7 +500,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsdel(fsno: string): Promise<SNFSFileSystemDel> {
+  fsdel(fsno: string): Promise<FsdelResult> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');

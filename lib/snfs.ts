@@ -21,7 +21,7 @@ export abstract class SNFSSession {
   abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
   abstract fsadd(options: FsaddOptions): Promise<FSInfo>;
   abstract fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo>;
-  abstract fsdel(fsno: string): Promise<SNFSFileSystemDel>;
+  abstract fsdel(fsno: string): Promise<FsdelResult>;
   abstract fslist(): Promise<FSInfo[]>;
 }
 
@@ -145,7 +145,7 @@ export interface FsmodOptions {
   max_path?: number;
 }
 
-export interface SNFSFileSystemDel {
+export interface FsdelResult {
 }
 
 export enum SNFSNodeKind {
