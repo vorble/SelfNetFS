@@ -18,7 +18,7 @@ import {
   NodeKind,
   ReaddirResult,
   ReadfileResult,
-  SNFSSession,
+  Session,
   SessionDetail,
   SessionInfo,
   StatResult,
@@ -175,7 +175,7 @@ export class SNFSMemory extends SNFS {
     return this._users.find(u => u.userno == userno) || null;
   }
 
-  login(options: LoginOptionsMemory): Promise<SNFSSession> {
+  login(options: LoginOptionsMemory): Promise<Session> {
     let reject = false;
     let user = null;
     for (let i = 0; i < this._users.length; ++i) {
@@ -191,25 +191,25 @@ export class SNFSMemory extends SNFS {
     if (!match || reject) {
       throw new SNFSError('Authentication failed.');
     }
-    const session = new SNFSSessionMemory(this, user);
+    const session = new SessionMemory(this, user);
     return Promise.resolve(session);
   }
 
-  _resume(session_token: string): SNFSSession {
+  _resume(session_token: string): Session {
     const user = this._users.find(u => u.userno == session_token);
     if (user == null) {
       throw new SNFSError('User not found.');
     }
-    const session = new SNFSSessionMemory(this, user);
+    const session = new SessionMemory(this, user);
     return session;
   }
 
-  resume(session_token: string): Promise<SNFSSession> {
+  resume(session_token: string): Promise<Session> {
     return Promise.resolve(this._resume(session_token));
   }
 }
 
-export class SNFSSessionMemory extends SNFSSession {
+export class SessionMemory extends Session {
   _snfs: SNFSMemory;
   _session_token: string;
   _logged_in_userno: string | null;

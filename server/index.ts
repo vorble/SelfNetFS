@@ -8,7 +8,7 @@ import {
 } from '../lib/memory';
 import {
   SNFSError,
-  SNFSSession,
+  Session,
   FileSystem,
 } from '../lib/snfs';
 import { SNFSPasswordModuleHash } from './password';

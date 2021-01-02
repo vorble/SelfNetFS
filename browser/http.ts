@@ -16,7 +16,7 @@ import {
   MoveResult,
   ReaddirResult,
   ReadfileResult,
-  SNFSSession,
+  Session,
   SessionDetail,
   SessionInfo,
   StatResult,
@@ -82,15 +82,15 @@ export class SNFSHttp extends SNFS {
     this._api_root = api_root;
   }
 
-  async login(options: LoginOptionsHttp): Promise<SNFSSession> {
+  async login(options: LoginOptionsHttp): Promise<Session> {
     const result = await apirequest(urljoin(this._api_root, 'login'), {
       name: options.name,
       password: options.password,
     });
-    return new SNFSSessionHttp(this, result.pool, result.userno);
+    return new SessionHttp(this, result.pool, result.userno);
   }
 
-  async resume(session_token: string): Promise<SNFSSession> {
+  async resume(session_token: string): Promise<Session> {
     let tok = null;
     try {
       tok = JSON.parse(session_token);
@@ -106,11 +106,11 @@ export class SNFSHttp extends SNFS {
     }
     const result = await apirequest(urljoin(this._api_root, pool, 'resume'), {
     });
-    return new SNFSSessionHttp(this, pool, result.userno);
+    return new SessionHttp(this, pool, result.userno);
   }
 }
 
-export class SNFSSessionHttp extends SNFSSession {
+export class SessionHttp extends Session {
   _snfs: SNFSHttp;
   _api_root: string;
   _userno: string;

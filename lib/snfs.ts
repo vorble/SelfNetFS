@@ -1,11 +1,11 @@
 export class SNFSError extends Error {}
 
 export abstract class SNFS {
-  abstract login(options: LoginOptions): Promise<SNFSSession>;
-  abstract resume(session_token: string): Promise<SNFSSession>;
+  abstract login(options: LoginOptions): Promise<Session>;
+  abstract resume(session_token: string): Promise<Session>;
 }
 
-export abstract class SNFSSession {
+export abstract class Session {
   abstract info(): SessionInfo;
   abstract detail(): Promise<SessionDetail>;
 
