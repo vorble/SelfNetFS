@@ -29,8 +29,8 @@ import {
   WritefileOptions,
 } from './snfs';
 import {
-  SNFSPasswordModule,
-  SNFSPasswordModuleNull,
+  PasswordModule,
+  PasswordModuleNull,
 } from './password';
 
 const LIMITS = {
@@ -130,11 +130,11 @@ function fileSystemToDetail(fs: FileSystemMemory): FSDetail {
 
 export class SNFSMemory extends SNFS {
   _uuidgen: () => string;
-  _password_module: SNFSPasswordModule;
+  _password_module: PasswordModule;
   _fss: FileSystemMemory[];
   _users: UserRecord[];
 
-  constructor(uuidgen: () => string, password_module: SNFSPasswordModule) {
+  constructor(uuidgen: () => string, password_module: PasswordModule) {
     super();
 
     this._uuidgen = uuidgen;

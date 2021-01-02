@@ -11,14 +11,14 @@ import {
   Session,
   FileSystem,
 } from '../lib/snfs';
-import { SNFSPasswordModuleHash } from './password';
+import { PasswordModuleHash } from './password';
 import Persist from './persist';
 import { ServerSessionManager, ServerSession } from './session';
 
 const persist = new Persist('./database');
 const sessions = new ServerSessionManager();
 const owners = new Map<string, SNFSMemory>();
-const null_owner = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+const null_owner = new SNFSMemory(uuid.v4, new PasswordModuleHash());
 
 if (process.argv.slice(2).indexOf('--init') >= 0) {
   const argv = process.argv.slice(2);
@@ -38,7 +38,7 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
     console.log('Please specify the owner\'s user\'s password.');
     process.exit(1);
   }
-  const snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+  const snfs = new SNFSMemory(uuid.v4, new PasswordModuleHash());
   snfs.bootstrap(name, password);
   persist.save(owner, snfs);
   console.log(`A database file for ${ owner } has been created.`);
@@ -50,7 +50,7 @@ function lookupOwner(req: express.Request, res: express.Response, next: express.
   const { owner } = req.params;
   let snfs: SNFSMemory | undefined | null = owners.get(owner);
   if (snfs == null) {
-    snfs = persist.load(owner, () => new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash()));
+    snfs = persist.load(owner, () => new SNFSMemory(uuid.v4, new PasswordModuleHash()));
     if (snfs != null) {
       owners.set(owner, snfs);
     }

@@ -1,9 +1,9 @@
 import crypto = require('crypto');
-import { SNFSPasswordModule } from '../lib/password';
+import { PasswordModule } from '../lib/password';
 
 const NULL_SHA512_SALT = Buffer.alloc(16);
 
-export class SNFSPasswordModuleHash extends SNFSPasswordModule {
+export class PasswordModuleHash extends PasswordModule {
   hash(password: string): string {
     return this.hash_sha512(password);
   }

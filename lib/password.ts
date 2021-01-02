@@ -1,9 +1,9 @@
-export abstract class SNFSPasswordModule {
+export abstract class PasswordModule {
   abstract hash(password: string): string;
   abstract check(password: string, hash: string): boolean;
 }
 
-export class SNFSPasswordModuleNull extends SNFSPasswordModule {
+export class PasswordModuleNull extends PasswordModule {
   hash(password: string): string {
     return password;
   }
