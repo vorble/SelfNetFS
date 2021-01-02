@@ -33,7 +33,7 @@ export abstract class SNFSFileSystem {
   abstract stat(path: string): Promise<StatResult>;
   abstract writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<WritefileResult>;
   abstract readfile(path: string): Promise<ReadfileResult>;
-  abstract unlink(path: string): Promise<SNFSUnlink>;
+  abstract unlink(path: string): Promise<UnlinkResult>;
   abstract move(path: string, newpath: string): Promise<MoveResult>;
 }
 
@@ -187,7 +187,7 @@ export interface ReadfileResult {
   data: Uint8Array;
 }
 
-export interface SNFSUnlink {
+export interface UnlinkResult {
 }
 
 export interface MoveResult {

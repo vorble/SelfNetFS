@@ -22,7 +22,7 @@ import {
   SessionDetail,
   SessionInfo,
   StatResult,
-  SNFSUnlink,
+  UnlinkResult,
   UserdelResult,
   UserInfo,
   WritefileResult,
@@ -755,7 +755,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return Promise.resolve(this._readfile(path));
   }
 
-  _unlink(path: string): SNFSUnlink {
+  _unlink(path: string): UnlinkResult {
     path = pathnormforfile(path);
     const f = this._files.get(path);
     if (f == null) {
@@ -767,7 +767,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     };
   }
 
-  unlink(path: string): Promise<SNFSUnlink> {
+  unlink(path: string): Promise<UnlinkResult> {
     return Promise.resolve(this._unlink(path));
   }
 
@@ -933,7 +933,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     throw errors[0]; // Maybe this isn't a great idea? It'll have the original stack trace.
   }
 
-  unlink(path: string): Promise<SNFSUnlink> {
+  unlink(path: string): Promise<UnlinkResult> {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');

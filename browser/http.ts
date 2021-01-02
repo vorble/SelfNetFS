@@ -21,7 +21,7 @@ import {
   SessionDetail,
   SessionInfo,
   StatResult,
-  SNFSUnlink,
+  UnlinkResult,
   UserdelResult,
   UserInfo,
   WritefileResult,
@@ -296,7 +296,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     return result;
   }
 
-  async unlink(path: string): Promise<SNFSUnlink> {
+  async unlink(path: string): Promise<UnlinkResult> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'unlink'), {
       fs_token: this._fs_token,
       path,
