@@ -55,8 +55,8 @@ export interface FileSystemInfo {
 
 export interface SNFSFileSystemSessionDetail {
   fs_token: string;
-  fs: FileSystemDetail;
-  union: FileSystemDetail[];
+  fs: FSDetail;
+  union: FSDetail[];
 }
 
 export interface FSInfo {
@@ -65,7 +65,7 @@ export interface FSInfo {
   limits: SNFSFileSystemLimits;
 }
 
-export interface FileSystemDetail {
+export interface FSDetail {
   name: string;
   fsno: string;
   limits: SNFSFileSystemLimits;

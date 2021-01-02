@@ -7,7 +7,7 @@ import {
   SNFSError,
   SNFSFileSystem,
   SNFSFileSystemDel,
-  FileSystemDetail,
+  FSDetail,
   FsgetOptions,
   FSInfo,
   SNFSFileSystemLimits,
@@ -116,7 +116,7 @@ function fileSystemToInfo(fs: SNFSFileSystemMemory): FSInfo {
   };
 }
 
-function fileSystemToDetail(fs: SNFSFileSystemMemory): FileSystemDetail {
+function fileSystemToDetail(fs: SNFSFileSystemMemory): FSDetail {
   return {
     name: fs._name,
     fsno: fs._fsno,
