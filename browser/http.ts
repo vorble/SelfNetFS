@@ -10,7 +10,7 @@ import {
   FsgetOptions,
   FSInfo,
   SNFSFileSystemLimits,
-  SNFSFileSystemSessionDetail,
+  FileSystemDetail,
   FileSystemInfo,
   SNFSLogout,
   SNFSMove,
@@ -252,7 +252,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     };
   }
 
-  async detail(): Promise<SNFSFileSystemSessionDetail> {
+  async detail(): Promise<FileSystemDetail> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'fsdetail'), {
       fs_token: this._fs_token,
     });

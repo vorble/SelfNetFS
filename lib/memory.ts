@@ -11,7 +11,7 @@ import {
   FsgetOptions,
   FSInfo,
   SNFSFileSystemLimits,
-  SNFSFileSystemSessionDetail,
+  FileSystemDetail,
   FileSystemInfo,
   SNFSLogout,
   SNFSMove,
@@ -610,7 +610,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     };
   }
 
-  detail(): Promise<SNFSFileSystemSessionDetail> {
+  detail(): Promise<FileSystemDetail> {
     return Promise.resolve({
       fs_token: JSON.stringify({ fsno: this._fsno, union: [], writeable: true }),
       fs: fileSystemToDetail(this),
@@ -851,7 +851,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     };
   }
 
-  detail(): Promise<SNFSFileSystemSessionDetail> {
+  detail(): Promise<FileSystemDetail> {
     return Promise.resolve({
       fs_token: JSON.stringify({ fsno: this._fsno, union: this._union.map(ufs => ufs._fsno), writeable: this._writeable }),
       fs: fileSystemToDetail(this._fs),
