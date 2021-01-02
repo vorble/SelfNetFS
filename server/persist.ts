@@ -60,11 +60,11 @@ function parse(dump: string, snfs: SNFSMemory): void {
   loadSNFSMemory(obj, snfs);
 }
 
-interface SNFSMemoryDump {
+interface MemoryDump {
   fss: FileSystemMemoryDump[];
   users: UserRecordDump[];
 }
-function dumpSNFSMemory(snfs: SNFSMemory): SNFSMemoryDump {
+function dumpSNFSMemory(snfs: SNFSMemory): MemoryDump {
   const users = [];
   for (const user of snfs._users.values()) {
     users.push(dumpUserRecord(user));
