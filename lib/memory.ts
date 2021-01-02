@@ -129,7 +129,7 @@ function fileSystemToDetail(fs: FileSystemMemory): FSDetail {
   };
 }
 
-export class SNFSMemory extends SNFS {
+export class Memory extends SNFS {
   _uuidgen: () => string;
   _password_module: PasswordModule;
   _fss: FileSystemMemory[];
@@ -211,11 +211,11 @@ export class SNFSMemory extends SNFS {
 }
 
 export class SessionMemory extends Session {
-  _snfs: SNFSMemory;
+  _snfs: Memory;
   _session_token: string;
   _logged_in_userno: string | null;
 
-  constructor(snfs: SNFSMemory, user: UserRecord) {
+  constructor(snfs: Memory, user: UserRecord) {
     super();
 
     this._snfs = snfs;
@@ -808,9 +808,9 @@ class FileSystemMemoryUnion extends FileSystemMemory {
   _union: FileSystemMemory[];
   _writeable: boolean;
   _userno: string;
-  _snfs: SNFSMemory;
+  _snfs: Memory;
 
-  constructor(fs: FileSystemMemory, union: FileSystemMemory[], writeable: boolean, uuidgen: () => string, user: UserRecord, snfs: SNFSMemory) {
+  constructor(fs: FileSystemMemory, union: FileSystemMemory[], writeable: boolean, uuidgen: () => string, user: UserRecord, snfs: Memory) {
     super(fs._name, fs._fsno, fs._limits, uuidgen);
 
     this._fs = fs;

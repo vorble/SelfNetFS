@@ -4,7 +4,7 @@ import {
   Session,
 } from '../lib/snfs';
 import {
-  SNFSMemory,
+  Memory,
   SessionMemory,
 } from '../lib/memory';
 import crypto = require('crypto');
@@ -59,7 +59,7 @@ export class ServerSessionManager {
     return new ServerSession(token, pool, session, expires);
   }
 
-  lookup(snfs: SNFSMemory, pool: string, token: string): ServerSession {
+  lookup(snfs: Memory, pool: string, token: string): ServerSession {
     try {
       const sesargs: any = jwt.verify(token, SESTOKEN_PRIVATE_KEY, { algorithms: ['ES256'] });
       if (typeof sesargs !== 'object') {

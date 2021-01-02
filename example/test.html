@@ -12,7 +12,7 @@
     const API_ROOT = 'https://selfnetfs-api.home.arpa/test';
 
     async function makeMemory() {
-      const snfs = new SNFS.SNFSMemory(SNFS.uuidgen, new SNFS.PasswordModuleNull());
+      const snfs = new SNFS.Memory(SNFS.uuidgen, new SNFS.PasswordModuleNull());
       await snfs.bootstrap('admin', 'password');
       const ses = await snfs.login({ name: 'admin', password: 'password' });
       const fs = await ses.fs();
