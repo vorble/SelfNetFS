@@ -441,7 +441,7 @@
         const ents = await fs.readdir(args[0]);
         for (const ent of ents) {
           let name = ent.name;
-          if (ent.kind == SNFS.SNFSNodeKind.Directory) {
+          if (ent.kind == SNFS.NodeKind.Directory) {
             name += '/';
           }
           shell.log(`${ name }`);
