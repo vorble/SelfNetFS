@@ -9,7 +9,7 @@ import {
   SNFSFileSystemDel,
   FileSystemDetail,
   FsgetOptions,
-  SNFSFileSystemInfo,
+  FSInfo,
   SNFSFileSystemLimits,
   SNFSFileSystemSessionDetail,
   SNFSFileSystemSessionInfo,
@@ -108,7 +108,7 @@ function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallbac
   return limits;
 }
 
-function fileSystemToInfo(fs: SNFSFileSystemMemory): SNFSFileSystemInfo {
+function fileSystemToInfo(fs: SNFSFileSystemMemory): FSInfo {
   return {
     name: fs._name,
     fsno: fs._fsno,
@@ -462,7 +462,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return this.fsget(fsno, { union, writeable });
   }
 
-  fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo> {
+  fsadd(options: FsaddOptions): Promise<FSInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -477,7 +477,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo> {
+  fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -525,7 +525,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve({});
   }
 
-  fslist(): Promise<SNFSFileSystemInfo[]> {
+  fslist(): Promise<FSInfo[]> {
     const logged_in_user = this._lookup_user();
     if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._fss.map(fileSystemToInfo));

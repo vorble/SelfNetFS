@@ -8,7 +8,7 @@ import {
   SNFSFileSystem,
   SNFSFileSystemDel,
   FsgetOptions,
-  SNFSFileSystemInfo,
+  FSInfo,
   SNFSFileSystemLimits,
   SNFSFileSystemSessionDetail,
   SNFSFileSystemSessionInfo,
@@ -196,14 +196,14 @@ export class SNFSSessionHttp extends SNFSSession {
     return new SNFSFileSystemHttp(this._snfs, this._api_root, this.pool, fs_token, result.fsno, result.union);
   }
 
-  async fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo> {
+  async fsadd(options: FsaddOptions): Promise<FSInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsadd'), {
       options,
     });
     return result;
   }
 
-  async fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo> {
+  async fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fsmod'), {
       fsno,
       options,
@@ -218,7 +218,7 @@ export class SNFSSessionHttp extends SNFSSession {
     return result;
   }
 
-  async fslist(): Promise<SNFSFileSystemInfo[]> {
+  async fslist(): Promise<FSInfo[]> {
     const result = await apirequest(urljoin(this._api_root, this.pool, 'fslist'), {
     });
     return result;

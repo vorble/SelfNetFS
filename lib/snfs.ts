@@ -19,10 +19,10 @@ export abstract class SNFSSession {
   abstract fs(): Promise<SNFSFileSystem>;
   abstract fsget(fsno: string, options?: FsgetOptions): Promise<SNFSFileSystem>;
   abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
-  abstract fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo>;
-  abstract fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo>;
+  abstract fsadd(options: FsaddOptions): Promise<FSInfo>;
+  abstract fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo>;
   abstract fsdel(fsno: string): Promise<SNFSFileSystemDel>;
-  abstract fslist(): Promise<SNFSFileSystemInfo[]>;
+  abstract fslist(): Promise<FSInfo[]>;
 }
 
 export abstract class SNFSFileSystem {
@@ -59,7 +59,7 @@ export interface SNFSFileSystemSessionDetail {
   union: FileSystemDetail[];
 }
 
-export interface SNFSFileSystemInfo {
+export interface FSInfo {
   name: string;
   fsno: string;
   limits: SNFSFileSystemLimits;
