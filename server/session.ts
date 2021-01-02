@@ -2,7 +2,6 @@ import {
   SNFS,
   SNFSError,
   SNFSFileSystem,
-  SNFSFileSystemGetOptions,
   SNFSSession,
 } from '../lib/snfs';
 import {

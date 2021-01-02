@@ -8,7 +8,7 @@ import {
   SNFSFileSystem,
   SNFSFileSystemDel,
   FileSystemDetail,
-  SNFSFileSystemGetOptions,
+  FsgetOptions,
   SNFSFileSystemInfo,
   SNFSFileSystemLimits,
   SNFSFileSystemSessionDetail,
@@ -398,7 +398,7 @@ export class SNFSSessionMemory extends SNFSSession {
     return Promise.resolve(new SNFSFileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
-  fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem> {
+  fsget(fsno: string, options?: FsgetOptions): Promise<SNFSFileSystem> {
     options = { ...options };
     if (options.union == null) {
       options.union = [];

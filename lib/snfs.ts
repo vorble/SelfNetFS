@@ -17,7 +17,7 @@ export abstract class SNFSSession {
   abstract userlist(): Promise<UserInfo[]>;
 
   abstract fs(): Promise<SNFSFileSystem>;
-  abstract fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
+  abstract fsget(fsno: string, options?: FsgetOptions): Promise<SNFSFileSystem>;
   abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
   abstract fsadd(options: FsaddOptions): Promise<SNFSFileSystemInfo>;
   abstract fsmod(fsno: string, options: FsmodOptions): Promise<SNFSFileSystemInfo>;
@@ -81,7 +81,7 @@ export interface SNFSFileSystemUsage {
 // holder. For now, assume it holds your selfnetfs server URL, username, and password.
 interface SNFSAuthCredentials {}
 
-export interface SNFSFileSystemGetOptions {
+export interface FsgetOptions {
   writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
   union?: string[]; // Array of fsno
 }
