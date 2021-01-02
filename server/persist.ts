@@ -86,12 +86,12 @@ interface FileSystemMemoryDump {
   name: string;
   fsno: string;
   limits: FSLimits;
-  files: SNFSFileMemoryDump[];
+  files: FileRecordDump[];
 }
 function dumpFileSystemMemory(fs: FileSystemMemory): FileSystemMemoryDump {
   const files = [];
   for (const file of fs._files.values()) {
-    files.push(dumpSNFSFileMemory(file));
+    files.push(dumpFileRecord(file));
   }
   return {
     name: fs._name,
@@ -103,31 +103,31 @@ function dumpFileSystemMemory(fs: FileSystemMemory): FileSystemMemoryDump {
 function loadFileSystemMemory(fs: any, snfs: SNFSMemory): FileSystemMemory {
   const result = new FileSystemMemory(fs.name, fs.fsno, fs.limits, snfs._uuidgen);
   for (const file of fs.files) {
-    const f = loadSNFSFileMemory(file);
+    const f = loadFileRecord(file);
     result._files.set(f.name, f);
     result._stored_bytes += f.data.length;
   }
   return result;
 }
 
-// Duplicate of SNFSFileMemory defined for the in-memory implementation so
+// Duplicate of FileRecord defined for the in-memory implementation so
 // the interface/class doesn't need to be exported but we can still
 // catch type discrepencies.
-interface SNFSFileMemory {
+interface FileRecord {
   name: string;
   ino: string;
   ctime: Date;
   mtime: Date;
   data: Uint8Array;
 }
-interface SNFSFileMemoryDump {
+interface FileRecordDump {
   name: string;
   ino: string;
   ctime: number;
   mtime: number;
   data: string; // base64 encoded.
 }
-function dumpSNFSFileMemory(file: SNFSFileMemory): SNFSFileMemoryDump {
+function dumpFileRecord(file: FileRecord): FileRecordDump {
   return {
     name: file.name,
     ino: file.ino,
@@ -136,7 +136,7 @@ function dumpSNFSFileMemory(file: SNFSFileMemory): SNFSFileMemoryDump {
     data: Buffer.from(file.data).toString('base64'),
   };
 }
-function loadSNFSFileMemory(file: any): SNFSFileMemory {
+function loadFileRecord(file: any): FileRecord {
   return {
     name: file.name,
     ino: file.ino,

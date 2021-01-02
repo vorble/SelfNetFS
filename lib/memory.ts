@@ -578,7 +578,7 @@ export class FileSystemMemory extends FileSystem {
   _fsno: string;
   _limits: FSLimits;
   _uuidgen: () => string;
-  _files: Map<string, SNFSFileMemory>;
+  _files: Map<string, FileRecord>;
   _stored_bytes: number;
 
   constructor(name: string, fsno: string, limits: FSLimits, uuidgen: () => string) {
@@ -588,7 +588,7 @@ export class FileSystemMemory extends FileSystem {
     this._fsno = fsno;
     this._limits = limits;
     this._uuidgen = uuidgen;
-    this._files = new Map<string, SNFSFileMemory>();
+    this._files = new Map<string, FileRecord>();
     this._stored_bytes = 0;
   }
 
@@ -1014,7 +1014,7 @@ interface UserRecord {
   union: FileSystemMemory[];
 }
 
-interface SNFSFileMemory {
+interface FileRecord {
   name: string;
   ino: string;
   ctime: Date;
