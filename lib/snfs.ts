@@ -30,7 +30,7 @@ export abstract class SNFSFileSystem {
   abstract detail(): Promise<FileSystemDetail>;
 
   abstract readdir(path: string): Promise<ReaddirResult[]>;
-  abstract stat(path: string): Promise<SNFSStat>;
+  abstract stat(path: string): Promise<StatResult>;
   abstract writefile(path: string, data: Uint8Array, options?: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
   abstract readfile(path: string): Promise<SNFSReadFile>;
   abstract unlink(path: string): Promise<SNFSUnlink>;
@@ -164,7 +164,7 @@ export interface ReaddirResult {
   writeable?: boolean;
 }
 
-export interface SNFSStat {
+export interface StatResult {
   name: string;
   kind: SNFSNodeKind;
   ino: string; // uuid, like inode number in other file systems

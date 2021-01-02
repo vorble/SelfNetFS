@@ -21,7 +21,7 @@ import {
   SNFSSession,
   SessionDetail,
   SessionInfo,
-  SNFSStat,
+  StatResult,
   SNFSUnlink,
   UserdelResult,
   UserInfo,
@@ -668,7 +668,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     return Promise.resolve(this._readdir(path));
   }
 
-  _stat(path: string): SNFSStat {
+  _stat(path: string): StatResult {
     path = pathnormforfile(path);
     const f = this._files.get(path);
     if (f == null) {
@@ -685,7 +685,7 @@ export class SNFSFileSystemMemory extends SNFSFileSystem {
     };
   }
 
-  stat(path: string): Promise<SNFSStat> {
+  stat(path: string): Promise<StatResult> {
     return Promise.resolve(this._stat(path));
   }
 
@@ -887,7 +887,7 @@ class SNFSFileSystemMemoryUnion extends SNFSFileSystemMemory {
     return Promise.resolve(result);
   }
 
-  stat(path: string): Promise<SNFSStat> {
+  stat(path: string): Promise<StatResult> {
     this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {

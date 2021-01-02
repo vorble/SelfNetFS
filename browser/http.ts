@@ -20,7 +20,7 @@ import {
   SNFSSession,
   SessionDetail,
   SessionInfo,
-  SNFSStat,
+  StatResult,
   SNFSUnlink,
   UserdelResult,
   UserInfo,
@@ -267,7 +267,7 @@ export class SNFSFileSystemHttp extends SNFSFileSystem {
     return result;
   }
 
-  async stat(path: string): Promise<SNFSStat> {
+  async stat(path: string): Promise<StatResult> {
     const result = await apirequest(urljoin(this._api_root, this._pool, 'stat'), {
       fs_token: this._fs_token,
       path,
