@@ -62,13 +62,13 @@ export interface FileSystemDetail {
 export interface FSInfo {
   name: string;
   fsno: string;
-  limits: SNFSFileSystemLimits;
+  limits: FSLimits;
 }
 
 export interface FSDetail {
   name: string;
   fsno: string;
-  limits: SNFSFileSystemLimits;
+  limits: FSLimits;
   usage: SNFSFileSystemUsage;
 }
 
@@ -122,7 +122,7 @@ export interface SNFSFileSystemAccess {
   writeable: boolean;
 }
 
-export interface SNFSFileSystemLimits {
+export interface FSLimits {
   max_files: number;
   max_storage: number;
   max_depth: number;

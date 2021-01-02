@@ -9,7 +9,7 @@ import {
   FsdelResult,
   FsgetOptions,
   FSInfo,
-  SNFSFileSystemLimits,
+  FSLimits,
   FileSystemDetail,
   FileSystemInfo,
   LogoutResult,

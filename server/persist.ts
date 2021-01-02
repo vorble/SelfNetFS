@@ -3,7 +3,7 @@ import path = require('path');
 
 import {
   SNFSError,
-  SNFSFileSystemLimits,
+  FSLimits,
 } from '../lib/snfs';
 import {
   SNFSFileSystemMemory,
@@ -85,7 +85,7 @@ function loadSNFSMemory(obj: any, snfs: SNFSMemory) {
 interface SNFSFileSystemMemoryDump {
   name: string;
   fsno: string;
-  limits: SNFSFileSystemLimits;
+  limits: FSLimits;
   files: SNFSFileMemoryDump[];
 }
 function dumpSNFSFileSystemMemory(fs: SNFSFileSystemMemory): SNFSFileSystemMemoryDump {

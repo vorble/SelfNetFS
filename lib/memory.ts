@@ -10,7 +10,7 @@ import {
   FSDetail,
   FsgetOptions,
   FSInfo,
-  SNFSFileSystemLimits,
+  FSLimits,
   FileSystemDetail,
   FileSystemInfo,
   LogoutResult,
@@ -71,7 +71,7 @@ function userRecordToUserInfo(user: UserRecord): UserInfo {
   };
 }
 
-function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallback: SNFSFileSystemLimits): SNFSFileSystemLimits {
+function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallback: FSLimits): FSLimits {
   const limits = { ...fallback };
   if (typeof options.max_files !== 'undefined') {
     if (options.max_files < 0) {
@@ -575,12 +575,12 @@ function pathnormfordir(path: string) {
 export class SNFSFileSystemMemory extends SNFSFileSystem {
   _name: string;
   _fsno: string;
-  _limits: SNFSFileSystemLimits;
+  _limits: FSLimits;
   _uuidgen: () => string;
   _files: Map<string, SNFSFileMemory>;
   _stored_bytes: number;
 
-  constructor(name: string, fsno: string, limits: SNFSFileSystemLimits, uuidgen: () => string) {
+  constructor(name: string, fsno: string, limits: FSLimits, uuidgen: () => string) {
     super();
 
     this._name = name;
