@@ -12,6 +12,7 @@ import {
   FSLimits,
   FileSystemDetail,
   FileSystemInfo,
+  LoginOptions,
   LogoutResult,
   MoveResult,
   ReaddirResult,
@@ -30,11 +31,6 @@ import {
   bufferToBase64,
   base64ToBuffer,
 } from './buffer';
-
-export interface LoginOptionsHttp {
-  name: string;
-  password: string;
-}
 
 function urljoin(...parts: string[]): string {
   return parts.map(p => p.replace(/^\//, '').replace(/\/$/, '')).join('/');
@@ -82,7 +78,7 @@ export class SNFSHttp extends SNFS {
     this._api_root = api_root;
   }
 
-  async login(options: LoginOptionsHttp): Promise<Session> {
+  async login(options: LoginOptions): Promise<Session> {
     const result = await apirequest(urljoin(this._api_root, 'login'), {
       name: options.name,
       password: options.password,

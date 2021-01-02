@@ -13,6 +13,7 @@ import {
   FSLimits,
   FileSystemDetail,
   FileSystemInfo,
+  LoginOptions,
   LogoutResult,
   MoveResult,
   NodeKind,
@@ -175,7 +176,7 @@ export class SNFSMemory extends SNFS {
     return this._users.find(u => u.userno == userno) || null;
   }
 
-  login(options: LoginOptionsMemory): Promise<Session> {
+  login(options: LoginOptions): Promise<Session> {
     let reject = false;
     let user = null;
     for (let i = 0; i < this._users.length; ++i) {
@@ -1002,11 +1003,6 @@ class FileSystemMemoryUnion extends FileSystemMemory {
     }
     throw error;
   }
-}
-
-export interface LoginOptionsMemory {
-  name: string;
-  password: string;
 }
 
 interface UserRecord {

@@ -77,9 +77,10 @@ export interface FileSystemUsage {
   bytes_used: number; // BigInt maybe?
 }
 
-// Each SNFS sub-class might need its own type of credentials, so this class is just a place
-// holder. For now, assume it holds your selfnetfs username and password.
-interface LoginOptions {}
+export interface LoginOptions {
+  name: string;
+  password: string;
+}
 
 export interface FsgetOptions {
   writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
