@@ -2,8 +2,8 @@ import fs = require('fs');
 import path = require('path');
 
 import {
-  SNFSError,
   FSLimits,
+  SNFSError,
 } from '../lib/snfs';
 import {
   FileSystemMemory,

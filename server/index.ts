@@ -7,9 +7,9 @@ import {
   Memory,
 } from '../lib/memory';
 import {
+  FileSystem,
   SNFSError,
   Session,
-  FileSystem,
 } from '../lib/snfs';
 import { PasswordModuleHash } from './password';
 import Persist from './persist';

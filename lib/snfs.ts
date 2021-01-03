@@ -37,14 +37,10 @@ export abstract class FileSystem {
   abstract move(path: string, newpath: string): Promise<MoveResult>;
 }
 
-export interface SessionInfo {
-  session_token: string;
-  userno: string;
-}
-
-export interface SessionDetail {
-  session_token: string;
-  user: UserInfo;
+export interface FileSystemDetail {
+  fs_token: string;
+  fs: FSDetail;
+  union: FSDetail[];
 }
 
 export interface FileSystemInfo {
@@ -53,10 +49,33 @@ export interface FileSystemInfo {
   union: string[];
 }
 
-export interface FileSystemDetail {
-  fs_token: string;
-  fs: FSDetail;
-  union: FSDetail[];
+export interface FSAccess {
+  name: string;
+  fsno: string;
+  writeable: boolean;
+}
+
+export interface FsaddOptions {
+  name: string;
+  max_files?: number;
+  max_storage?: number;
+  max_depth?: number;
+  max_path?: number;
+}
+
+export interface FsdelResult {
+}
+
+export interface FSDetail {
+  name: string;
+  fsno: string;
+  limits: FSLimits;
+  usage: FSUsage;
+}
+
+export interface FsgetOptions {
+  writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
+  union?: string[]; // Array of fsno
 }
 
 export interface FSInfo {
@@ -65,11 +84,19 @@ export interface FSInfo {
   limits: FSLimits;
 }
 
-export interface FSDetail {
-  name: string;
-  fsno: string;
-  limits: FSLimits;
-  usage: FSUsage;
+export interface FSLimits {
+  max_files: number;
+  max_storage: number;
+  max_depth: number;
+  max_path: number;
+}
+
+export interface FsmodOptions {
+  name?: string;
+  max_files?: number;
+  max_storage?: number;
+  max_depth?: number;
+  max_path?: number;
 }
 
 export interface FSUsage {
@@ -82,71 +109,10 @@ export interface LoginOptions {
   password: string;
 }
 
-export interface FsgetOptions {
-  writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
-  union?: string[]; // Array of fsno
-}
-
 export interface LogoutResult {
 }
 
-export interface UserInfo {
-  userno: string;
-  name: string;
-  admin: boolean;
-  fs: FSAccess | null;
-  union: FSAccess[];
-}
-
-export interface UseraddOptions {
-  name: string;
-  password: string;
-  admin?: boolean;
-  fs?: string | null;
-  union?: string[];
-}
-
-export interface UsermodOptions {
-  name?: string;
-  password?: string;
-  admin?: boolean;
-  fs?: string | null;
-  union?: string[];
-}
-
-export interface UserdelResult {
-}
-
-export interface FSAccess {
-  name: string;
-  fsno: string;
-  writeable: boolean;
-}
-
-export interface FSLimits {
-  max_files: number;
-  max_storage: number;
-  max_depth: number;
-  max_path: number;
-}
-
-export interface FsaddOptions {
-  name: string;
-  max_files?: number;
-  max_storage?: number;
-  max_depth?: number;
-  max_path?: number;
-}
-
-export interface FsmodOptions {
-  name?: string;
-  max_files?: number;
-  max_storage?: number;
-  max_depth?: number;
-  max_path?: number;
-}
-
-export interface FsdelResult {
+export interface MoveResult {
 }
 
 export enum NodeKind {
@@ -165,6 +131,20 @@ export interface ReaddirResult {
   writeable?: boolean;
 }
 
+export interface ReadfileResult {
+  data: Uint8Array;
+}
+
+export interface SessionDetail {
+  session_token: string;
+  user: UserInfo;
+}
+
+export interface SessionInfo {
+  session_token: string;
+  userno: string;
+}
+
 export interface StatResult {
   name: string;
   kind: NodeKind;
@@ -175,6 +155,36 @@ export interface StatResult {
   writeable: boolean;
 }
 
+export interface UnlinkResult {
+}
+
+export interface UseraddOptions {
+  name: string;
+  password: string;
+  admin?: boolean;
+  fs?: string | null;
+  union?: string[];
+}
+
+export interface UserdelResult {
+}
+
+export interface UserInfo {
+  userno: string;
+  name: string;
+  admin: boolean;
+  fs: FSAccess | null;
+  union: FSAccess[];
+}
+
+export interface UsermodOptions {
+  name?: string;
+  password?: string;
+  admin?: boolean;
+  fs?: string | null;
+  union?: string[];
+}
+
 export interface WritefileOptions {
   // To preserve the ino of the file. Default is to not preserve.
   truncate?: boolean;
@@ -182,14 +192,4 @@ export interface WritefileOptions {
 
 export interface WritefileResult {
   ino: string;
-}
-
-export interface ReadfileResult {
-  data: Uint8Array;
-}
-
-export interface UnlinkResult {
-}
-
-export interface MoveResult {
 }
