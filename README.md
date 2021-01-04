@@ -37,7 +37,7 @@ let ses = null;
 let fs = null;
 
 async function startup() {
-  api = new SNFS.SNFSHttp('https://selfnetfs-api.home.arpa/myowner');
+  api = new SNFS.Http('https://selfnetfs-api.home.arpa/myowner');
   try {
     ses = await api.login({
       name: 'guest',
@@ -86,7 +86,7 @@ let fs = null;
 async function startup() {
   const api_root = localStorage.getItem('snfs_api_root') || 'https://selfnetfs-api.home.arpa/myowner';
   const session_token = localStorage.getItem('snfs_session_token');
-  api = new SNFS.SNFSHttp(api_root);
+  api = new SNFS.Http(api_root);
   try {
     ses = await api.resume(session_token);
     console.log('Successfully resumed session.');

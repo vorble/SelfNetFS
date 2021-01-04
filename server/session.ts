@@ -1,13 +1,11 @@
 import {
   SNFS,
   SNFSError,
-  SNFSFileSystem,
-  SNFSFileSystemGetOptions,
-  SNFSSession,
+  Session,
 } from '../lib/snfs';
 import {
-  SNFSMemory,
-  SNFSSessionMemory,
+  Memory,
+  SessionMemory,
 } from '../lib/memory';
 import crypto = require('crypto');
 import jwt = require('jsonwebtoken');
@@ -54,14 +52,14 @@ function makeToken(session_token: string, expires: Date) {
 }
 
 export class ServerSessionManager {
-  create(session: SNFSSession): ServerSession {
+  create(session: Session): ServerSession {
     const expires = makeExpires();
     const pool = makePool();
     const token = makeToken(session.info().session_token, expires);
     return new ServerSession(token, pool, session, expires);
   }
 
-  lookup(snfs: SNFSMemory, pool: string, token: string): ServerSession {
+  lookup(snfs: Memory, pool: string, token: string): ServerSession {
     try {
       const sesargs: any = jwt.verify(token, SESTOKEN_PRIVATE_KEY, { algorithms: ['ES256'] });
       if (typeof sesargs !== 'object') {
@@ -85,10 +83,10 @@ export class ServerSessionManager {
 export class ServerSession {
   token: string; // JWT encoded data.
   pool: string;
-  session: SNFSSession;
+  session: Session;
   expires: Date;
 
-  constructor(token: string, pool: string, session: SNFSSession, expires: Date) {
+  constructor(token: string, pool: string, session: Session, expires: Date) {
     this.token = token;
     this.pool = pool;
     this.session = session;

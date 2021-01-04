@@ -2,12 +2,12 @@ import fs = require('fs');
 import path = require('path');
 
 import {
+  FSLimits,
   SNFSError,
-  SNFSFileSystemLimits,
 } from '../lib/snfs';
 import {
-  SNFSFileSystemMemory,
-  SNFSMemory,
+  FileSystemMemory,
+  Memory,
 } from '../lib/memory';
 
 export default class Persist {
@@ -17,7 +17,7 @@ export default class Persist {
     this._database_dir = database_dir;
   }
 
-  save(owner: string, snfs: SNFSMemory): void {
+  save(owner: string, snfs: Memory): void {
     const content = stringify(snfs);
     try {
       fs.writeFileSync(path.join(this._database_dir, owner + '.json'), content);
@@ -32,7 +32,7 @@ export default class Persist {
   // load() might get called for non-existant owners very
   // often, so it is designed not to throw and instead returns
   // null if there is a problem (usually file not found).
-  load(owner: string, factory: () => SNFSMemory): SNFSMemory | null {
+  load(owner: string, factory: () => Memory): Memory | null {
     try {
       const content = fs.readFileSync(path.join(this._database_dir, owner + '.json'));
       const snfs = factory();
@@ -48,50 +48,50 @@ export default class Persist {
   }
 }
 
-// Extracts the content of an SNFSMemory instance so that the parse() function can
-// restore the data into an SNFSMemory instance at a later time.
-function stringify(snfs: SNFSMemory): string {
-  return JSON.stringify(dumpSNFSMemory(snfs));
+// Extracts the content of an Memory instance so that the parse() function can
+// restore the data into an Memory instance at a later time.
+function stringify(snfs: Memory): string {
+  return JSON.stringify(dumpMemory(snfs));
 }
 
-// Replace the contents of the given SNFSMemory instance.
-function parse(dump: string, snfs: SNFSMemory): void {
+// Replace the contents of the given Memory instance.
+function parse(dump: string, snfs: Memory): void {
   const obj = JSON.parse(dump);
-  loadSNFSMemory(obj, snfs);
+  loadMemory(obj, snfs);
 }
 
-interface SNFSMemoryDump {
-  fss: SNFSFileSystemMemoryDump[];
+interface MemoryDump {
+  fss: FileSystemMemoryDump[];
   users: UserRecordDump[];
 }
-function dumpSNFSMemory(snfs: SNFSMemory): SNFSMemoryDump {
+function dumpMemory(snfs: Memory): MemoryDump {
   const users = [];
   for (const user of snfs._users.values()) {
     users.push(dumpUserRecord(user));
   }
   return {
-    fss: snfs._fss.map(dumpSNFSFileSystemMemory),
+    fss: snfs._fss.map(dumpFileSystemMemory),
     users,
   };
 }
-function loadSNFSMemory(obj: any, snfs: SNFSMemory) {
+function loadMemory(obj: any, snfs: Memory) {
   snfs._fss.length = 0;
-  const fss = obj.fss.map((fs: any) => loadSNFSFileSystemMemory(fs, snfs));
+  const fss = obj.fss.map((fs: any) => loadFileSystemMemory(fs, snfs));
   snfs._fss = fss;
   const users = obj.users.map((user: any) => loadUserRecord(user, snfs));
   snfs._users = users;
 }
 
-interface SNFSFileSystemMemoryDump {
+interface FileSystemMemoryDump {
   name: string;
   fsno: string;
-  limits: SNFSFileSystemLimits;
-  files: SNFSFileMemoryDump[];
+  limits: FSLimits;
+  files: FileRecordDump[];
 }
-function dumpSNFSFileSystemMemory(fs: SNFSFileSystemMemory): SNFSFileSystemMemoryDump {
+function dumpFileSystemMemory(fs: FileSystemMemory): FileSystemMemoryDump {
   const files = [];
   for (const file of fs._files.values()) {
-    files.push(dumpSNFSFileMemory(file));
+    files.push(dumpFileRecord(file));
   }
   return {
     name: fs._name,
@@ -100,34 +100,34 @@ function dumpSNFSFileSystemMemory(fs: SNFSFileSystemMemory): SNFSFileSystemMemor
     files,
   };
 }
-function loadSNFSFileSystemMemory(fs: any, snfs: SNFSMemory): SNFSFileSystemMemory {
-  const result = new SNFSFileSystemMemory(fs.name, fs.fsno, fs.limits, snfs._uuidgen);
+function loadFileSystemMemory(fs: any, snfs: Memory): FileSystemMemory {
+  const result = new FileSystemMemory(fs.name, fs.fsno, fs.limits, snfs._uuidgen);
   for (const file of fs.files) {
-    const f = loadSNFSFileMemory(file);
+    const f = loadFileRecord(file);
     result._files.set(f.name, f);
     result._stored_bytes += f.data.length;
   }
   return result;
 }
 
-// Duplicate of SNFSFileMemory defined for the in-memory implementation so
+// Duplicate of FileRecord defined for the in-memory implementation so
 // the interface/class doesn't need to be exported but we can still
 // catch type discrepencies.
-interface SNFSFileMemory {
+interface FileRecord {
   name: string;
   ino: string;
   ctime: Date;
   mtime: Date;
   data: Uint8Array;
 }
-interface SNFSFileMemoryDump {
+interface FileRecordDump {
   name: string;
   ino: string;
   ctime: number;
   mtime: number;
   data: string; // base64 encoded.
 }
-function dumpSNFSFileMemory(file: SNFSFileMemory): SNFSFileMemoryDump {
+function dumpFileRecord(file: FileRecord): FileRecordDump {
   return {
     name: file.name,
     ino: file.ino,
@@ -136,7 +136,7 @@ function dumpSNFSFileMemory(file: SNFSFileMemory): SNFSFileMemoryDump {
     data: Buffer.from(file.data).toString('base64'),
   };
 }
-function loadSNFSFileMemory(file: any): SNFSFileMemory {
+function loadFileRecord(file: any): FileRecord {
   return {
     name: file.name,
     ino: file.ino,
@@ -154,8 +154,8 @@ interface UserRecord {
   name: string;
   password: string;
   admin: boolean;
-  fs: SNFSFileSystemMemory | null;
-  union: SNFSFileSystemMemory[];
+  fs: FileSystemMemory | null;
+  union: FileSystemMemory[];
 }
 interface UserRecordDump {
   userno: string;
@@ -175,8 +175,8 @@ function dumpUserRecord(user: UserRecord): UserRecordDump {
     union: user.union.map(ufs => ufs._fsno),
   };
 }
-function loadUserRecord(user: any, snfs: SNFSMemory): UserRecord {
-  function lookupFS(fsno: string): SNFSFileSystemMemory {
+function loadUserRecord(user: any, snfs: Memory): UserRecord {
+  function lookupFS(fsno: string): FileSystemMemory {
     const fs = snfs._fss.find(fs => fs._fsno == fsno);
     if (fs == null) {
       throw new SNFSError('File system not found.');

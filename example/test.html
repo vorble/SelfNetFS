@@ -12,7 +12,7 @@
     const API_ROOT = 'https://selfnetfs-api.home.arpa/test';
 
     async function makeMemory() {
-      const snfs = new SNFS.SNFSMemory(SNFS.uuidgen, new SNFS.SNFSPasswordModuleNull());
+      const snfs = new SNFS.Memory(SNFS.uuidgen, new SNFS.PasswordModuleNull());
       await snfs.bootstrap('admin', 'password');
       const ses = await snfs.login({ name: 'admin', password: 'password' });
       const fs = await ses.fs();
@@ -23,7 +23,7 @@
       let ses = null;
       const api_root = localStorage.getItem('snfs_test_api_root') || API_ROOT;
       const session_token = localStorage.getItem('snfs_test_session_token');
-      const snfs = new SNFS.SNFSHttp(api_root);
+      const snfs = new SNFS.Http(api_root);
       try {
         ses = await snfs.resume(session_token);
         console.log('Successfully resumed session.');
@@ -92,6 +92,21 @@
         await fs.writefile('/test2', tenc('test2'));
         await fs.stat('/test2');
         await fs.writefile('/test1/testfile', tenc('more data'));
+        {
+          const entries = await fs.readdir('/');
+          if (entries.length != 3) {
+            throw new Error('Unexpected number of entries!');
+          }
+          if (entries.filter(e => e.kind == 'dir').length != 1) {
+            throw new Error('Unexpected number of directories!');
+          }
+          if (entries.filter(e => e.kind == 'file').length != 2) {
+            throw new Error('Unexpected number of files!');
+          }
+        }
+        await fs.writefile('/test3', tenc('test3'));
+        await fs.move('/test3', '/test4');
+        await fs.unlink('/test4');
         {
           const entries = await fs.readdir('/');
           if (entries.length != 3) {
@@ -209,6 +224,27 @@
           {
             const { userno } = await ses.useradd({ name: 'testing', password: 'password', union: [fs.info().fsno] });
             await ses.userdel(userno);
+          }
+          {
+            const info = await ses.useradd({ name: 'someone', password: 'password' });
+            if (info.admin) {
+              throw new SNFSError('useradd defaulted new user to admin.');
+            }
+            await ses.userdel(info.userno);
+          }
+          {
+            const info = await ses.useradd({ name: 'someone', password: 'password', admin: false });
+            if (info.admin) {
+              throw new SNFSError('useradd did not create non-admin user.');
+            }
+            await ses.userdel(info.userno);
+          }
+          {
+            const info = await ses.useradd({ name: 'someone', password: 'password', admin: true });
+            if (!info.admin) {
+              throw new SNFSError('useradd did not create admin user.');
+            }
+            await ses.userdel(info.userno);
           }
         }
 

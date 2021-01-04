@@ -1,128 +1,97 @@
 export class SNFSError extends Error {}
 
 export abstract class SNFS {
-  abstract login(options: SNFSAuthCredentials): Promise<SNFSSession>;
-  abstract resume(session_token: string): Promise<SNFSSession>;
+  abstract login(options: LoginOptions): Promise<Session>;
+  abstract resume(session_token: string): Promise<Session>;
 }
 
-export abstract class SNFSSession {
-  abstract info(): SNFSSessionInfo;
-  abstract detail(): Promise<SNFSSessionDetail>;
+export abstract class Session {
+  abstract info(): SessionInfo;
+  abstract detail(): Promise<SessionDetail>;
 
-  abstract logout(): Promise<SNFSLogout>;
+  abstract logout(): Promise<LogoutResult>;
 
-  abstract useradd(options: SNFSUserOptions): Promise<SNFSUserInfo>;
-  abstract usermod(userno: string, options: SNFSUserOptions): Promise<SNFSUserInfo>;
-  abstract userdel(userno: string): Promise<SNFSUserDel>;
-  abstract userlist(): Promise<SNFSUserInfo[]>;
+  abstract useradd(options: UseraddOptions): Promise<UserInfo>;
+  abstract usermod(userno: string, options: UsermodOptions): Promise<UserInfo>;
+  abstract userdel(userno: string): Promise<UserdelResult>;
+  abstract userlist(): Promise<UserInfo[]>;
 
-  abstract fs(): Promise<SNFSFileSystem>;
-  abstract fsget(fsno: string, options?: SNFSFileSystemGetOptions): Promise<SNFSFileSystem>;
-  abstract fsresume(fs_token: string): Promise<SNFSFileSystem>;
-  abstract fsadd(options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
-  abstract fsmod(fsno: string, options: SNFSFileSystemOptions): Promise<SNFSFileSystemInfo>;
-  abstract fsdel(fsno: string): Promise<SNFSFileSystemDel>;
-  abstract fslist(): Promise<SNFSFileSystemInfo[]>;
+  abstract fs(): Promise<FileSystem>;
+  abstract fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem>;
+  abstract fsresume(fs_token: string): Promise<FileSystem>;
+  abstract fsadd(options: FsaddOptions): Promise<FSInfo>;
+  abstract fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo>;
+  abstract fsdel(fsno: string): Promise<FsdelResult>;
+  abstract fslist(): Promise<FSInfo[]>;
 }
 
-export abstract class SNFSFileSystem {
-  abstract info(): SNFSFileSystemSessionInfo;
-  abstract detail(): Promise<SNFSFileSystemSessionDetail>;
+export abstract class FileSystem {
+  abstract info(): FileSystemInfo;
+  abstract detail(): Promise<FileSystemDetail>;
 
-  abstract readdir(path: string): Promise<SNFSReadDir[]>;
-  abstract stat(path: string): Promise<SNFSStat>;
-  abstract writefile(path: string, data: Uint8Array, options: SNFSWriteFileOptions): Promise<SNFSWriteFile>;
-  abstract readfile(path: string): Promise<SNFSReadFile>;
-  abstract unlink(path: string): Promise<SNFSUnlink>;
-  abstract move(path: string, newpath: string): Promise<SNFSMove>;
+  abstract readdir(path: string): Promise<ReaddirResult[]>;
+  abstract stat(path: string): Promise<StatResult>;
+  abstract writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<WritefileResult>;
+  abstract readfile(path: string): Promise<ReadfileResult>;
+  abstract unlink(path: string): Promise<UnlinkResult>;
+  abstract move(path: string, newpath: string): Promise<MoveResult>;
 }
 
-export interface SNFSSessionInfo {
-  session_token: string;
-  userno: string;
+export interface FileSystemDetail {
+  fs_token: string;
+  fs: FSDetail;
+  union: FSDetail[];
 }
 
-export interface SNFSSessionDetail {
-  session_token: string;
-  user: SNFSUserInfo;
-}
-
-export interface SNFSFileSystemSessionInfo {
+export interface FileSystemInfo {
   fs_token: string;
   fsno: string;
   union: string[];
 }
 
-export interface SNFSFileSystemSessionDetail {
-  fs_token: string;
-  fs: SNFSFileSystemDetail;
-  union: SNFSFileSystemDetail[];
-}
-
-export interface SNFSFileSystemInfo {
-  name: string;
-  fsno: string;
-  limits: SNFSFileSystemLimits;
-}
-
-export interface SNFSFileSystemDetail {
-  name: string;
-  fsno: string;
-  limits: SNFSFileSystemLimits;
-  usage: SNFSFileSystemUsage;
-}
-
-export interface SNFSFileSystemUsage {
-  no_files: number;
-  bytes_used: number; // BigInt maybe?
-}
-
-// Each SNFS sub-class might need its own type of credentials, so this class is just a place
-// holder. For now, assume it holds your selfnetfs server URL, username, and password.
-interface SNFSAuthCredentials {}
-
-export interface SNFSFileSystemGetOptions {
-  writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
-  union?: string[]; // Array of fsno
-}
-
-export interface SNFSLogout {
-}
-
-export interface SNFSUserInfo {
-  userno: string;
-  name: string;
-  admin: boolean;
-  fs: SNFSFileSystemAccess | null;
-  union: SNFSFileSystemAccess[];
-}
-
-export interface SNFSUserOptions {
-  name?: string;
-  password?: string;
-  admin?: boolean;
-  fs?: string | null;
-  union?: string[];
-}
-
-export interface SNFSUserDel {
-}
-
-export interface SNFSFileSystemAccess {
+export interface FSAccess {
   name: string;
   fsno: string;
   writeable: boolean;
 }
 
-export interface SNFSFileSystemLimits {
+export interface FsaddOptions {
+  name: string;
+  max_files?: number;
+  max_storage?: number;
+  max_depth?: number;
+  max_path?: number;
+}
+
+export interface FsdelResult {
+}
+
+export interface FSDetail {
+  name: string;
+  fsno: string;
+  limits: FSLimits;
+  usage: FSUsage;
+}
+
+export interface FsgetOptions {
+  writeable?: boolean; // Writable bit mask. Set to true to request a writeable fs.
+  union?: string[]; // Array of fsno
+}
+
+export interface FSInfo {
+  name: string;
+  fsno: string;
+  limits: FSLimits;
+}
+
+export interface FSLimits {
   max_files: number;
   max_storage: number;
   max_depth: number;
   max_path: number;
 }
 
-// TODO: Split this into two, one for fsadd and one for fsmod.
-export interface SNFSFileSystemOptions {
+export interface FsmodOptions {
   name?: string;
   max_files?: number;
   max_storage?: number;
@@ -130,17 +99,30 @@ export interface SNFSFileSystemOptions {
   max_path?: number;
 }
 
-export interface SNFSFileSystemDel {
+export interface FSUsage {
+  no_files: number;
+  bytes_used: number; // BigInt maybe?
 }
 
-export enum SNFSNodeKind {
+export interface LoginOptions {
+  name: string;
+  password: string;
+}
+
+export interface LogoutResult {
+}
+
+export interface MoveResult {
+}
+
+export enum NodeKind {
   File = 'file',
   Directory = 'dir',
 }
 
-export interface SNFSReadDir {
+export interface ReaddirResult {
   name: string;
-  kind: SNFSNodeKind;
+  kind: NodeKind;
   // Below only for files.
   ino?: string; // uuid, like inode number in other file systems
   ctime?: Date;
@@ -149,9 +131,23 @@ export interface SNFSReadDir {
   writeable?: boolean;
 }
 
-export interface SNFSStat {
+export interface ReadfileResult {
+  data: Uint8Array;
+}
+
+export interface SessionDetail {
+  session_token: string;
+  user: UserInfo;
+}
+
+export interface SessionInfo {
+  session_token: string;
+  userno: string;
+}
+
+export interface StatResult {
   name: string;
-  kind: SNFSNodeKind;
+  kind: NodeKind;
   ino: string; // uuid, like inode number in other file systems
   ctime: Date;
   mtime: Date;
@@ -159,21 +155,41 @@ export interface SNFSStat {
   writeable: boolean;
 }
 
-export interface SNFSWriteFileOptions {
+export interface UnlinkResult {
+}
+
+export interface UseraddOptions {
+  name: string;
+  password: string;
+  admin?: boolean;
+  fs?: string | null;
+  union?: string[];
+}
+
+export interface UserdelResult {
+}
+
+export interface UserInfo {
+  userno: string;
+  name: string;
+  admin: boolean;
+  fs: FSAccess | null;
+  union: FSAccess[];
+}
+
+export interface UsermodOptions {
+  name?: string;
+  password?: string;
+  admin?: boolean;
+  fs?: string | null;
+  union?: string[];
+}
+
+export interface WritefileOptions {
   // To preserve the ino of the file. Default is to not preserve.
   truncate?: boolean;
 }
 
-export interface SNFSWriteFile {
+export interface WritefileResult {
   ino: string;
-}
-
-export interface SNFSReadFile {
-  data: Uint8Array;
-}
-
-export interface SNFSUnlink {
-}
-
-export interface SNFSMove {
 }

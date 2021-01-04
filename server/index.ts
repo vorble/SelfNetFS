@@ -4,21 +4,21 @@ import express = require('express');
 import uuid = require('uuid');
 
 import {
-  SNFSMemory,
+  Memory,
 } from '../lib/memory';
 import {
+  FileSystem,
   SNFSError,
-  SNFSSession,
-  SNFSFileSystem,
+  Session,
 } from '../lib/snfs';
-import { SNFSPasswordModuleHash } from './password';
+import { PasswordModuleHash } from './password';
 import Persist from './persist';
 import { ServerSessionManager, ServerSession } from './session';
 
 const persist = new Persist('./database');
 const sessions = new ServerSessionManager();
-const owners = new Map<string, SNFSMemory>();
-const null_owner = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+const owners = new Map<string, Memory>();
+const null_owner = new Memory(uuid.v4, new PasswordModuleHash());
 
 if (process.argv.slice(2).indexOf('--init') >= 0) {
   const argv = process.argv.slice(2);
@@ -38,7 +38,7 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
     console.log('Please specify the owner\'s user\'s password.');
     process.exit(1);
   }
-  const snfs = new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash());
+  const snfs = new Memory(uuid.v4, new PasswordModuleHash());
   snfs.bootstrap(name, password);
   persist.save(owner, snfs);
   console.log(`A database file for ${ owner } has been created.`);
@@ -48,9 +48,9 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
 
 function lookupOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
   const { owner } = req.params;
-  let snfs: SNFSMemory | undefined | null = owners.get(owner);
+  let snfs: Memory | undefined | null = owners.get(owner);
   if (snfs == null) {
-    snfs = persist.load(owner, () => new SNFSMemory(uuid.v4, new SNFSPasswordModuleHash()));
+    snfs = persist.load(owner, () => new Memory(uuid.v4, new PasswordModuleHash()));
     if (snfs != null) {
       owners.set(owner, snfs);
     }
@@ -183,10 +183,10 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
     if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
-    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+    if (typeof options.name !== 'string') {
       throw new SNFSError('options.name must be a string.');
     }
-    if (typeof options.password !== 'undefined' && typeof options.password !== 'string') {
+    if (typeof options.password !== 'string') {
       throw new SNFSError('options.password must be a string.');
     }
     if (typeof options.admin !== 'undefined' && typeof options.admin !== 'boolean') {
@@ -206,8 +206,8 @@ app.post('/:owner/:pool/useradd', lookupOwner, lookupSession, async (req, res, n
       }
     }
     const use_options = {
-      name: options.name as string | undefined,
-      password: options.password as string | undefined,
+      name: options.name as string,
+      password: options.password as string,
       admin: options.admin as boolean | undefined,
       fs: options.fs as string | undefined,
       union: typeof options.union == 'undefined' ? undefined : options.union.map((u: any) => u as string),
@@ -339,7 +339,7 @@ app.post('/:owner/:pool/fsget', lookupOwner, lookupSession, async (req, res, nex
 app.options('/:owner/:pool/fsresume', (req, res) => { res.end(); });
 app.post('/:owner/:pool/fsresume', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     res.locals.finish(fs.info());
   } catch (err) {
     next(err);
@@ -354,7 +354,7 @@ app.post('/:owner/:pool/fsadd', lookupOwner, lookupSession, async (req, res, nex
     if (typeof options !== 'object') {
       throw new SNFSError('options must be an object.');
     }
-    if (typeof options.name !== 'undefined' && typeof options.name !== 'string') {
+    if (typeof options.name !== 'string') {
       throw new SNFSError('options.name must be a string.');
     }
     if (typeof options.max_files !== 'undefined' && typeof options.max_files !== 'number') {
@@ -448,7 +448,7 @@ app.post('/:owner/:pool/fslist', lookupOwner, lookupSession, async (req, res, ne
 app.options('/:owner/:pool/fsdetail', (req, res) => { res.end(); });
 app.post('/:owner/:pool/fsdetail', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     res.locals.finish(await fs.detail());
   } catch (err) {
     next(err);
@@ -458,7 +458,7 @@ app.post('/:owner/:pool/fsdetail', lookupOwner, lookupSession, lookupFileSystem,
 app.options('/:owner/:pool/readdir', (req, res) => { res.end(); });
 app.post('/:owner/:pool/readdir', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -472,7 +472,7 @@ app.post('/:owner/:pool/readdir', lookupOwner, lookupSession, lookupFileSystem, 
 app.options('/:owner/:pool/stat', (req, res) => { res.end(); });
 app.post('/:owner/:pool/stat', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -491,7 +491,7 @@ app.post('/:owner/:pool/stat', lookupOwner, lookupSession, lookupFileSystem, asy
 app.options('/:owner/:pool/writefile', (req, res) => { res.end(); });
 app.post('/:owner/:pool/writefile', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path, data, options } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -516,7 +516,7 @@ app.post('/:owner/:pool/writefile', lookupOwner, lookupSession, lookupFileSystem
 app.options('/:owner/:pool/readfile', (req, res) => { res.end(); });
 app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -534,7 +534,7 @@ app.post('/:owner/:pool/readfile', lookupOwner, lookupSession, lookupFileSystem,
 app.options('/:owner/:pool/unlink', (req, res) => { res.end(); });
 app.post('/:owner/:pool/unlink', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');
@@ -548,7 +548,7 @@ app.post('/:owner/:pool/unlink', lookupOwner, lookupSession, lookupFileSystem, a
 app.options('/:owner/:pool/move', (req, res, next) => { res.end(); });
 app.post('/:owner/:pool/move', lookupOwner, lookupSession, lookupFileSystem, async (req, res, next) => {
   try {
-    const fs: SNFSFileSystem = res.locals.fs;
+    const fs: FileSystem = res.locals.fs;
     const { path, newpath } = req.body;
     if (typeof path !== 'string') {
       throw new SNFSError('path must be a string.');

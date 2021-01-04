@@ -100,7 +100,7 @@
         return;
       }
       const [api_root, name, password] = args;
-      api = new SNFS.SNFSHttp(api_root);
+      api = new SNFS.Http(api_root);
       try {
         ses = await api.login({ name, password });
         localStorage.setItem('snfs_api_root', api_root);
@@ -441,7 +441,7 @@
         const ents = await fs.readdir(args[0]);
         for (const ent of ents) {
           let name = ent.name;
-          if (ent.kind == SNFS.SNFSNodeKind.Directory) {
+          if (ent.kind == SNFS.NodeKind.Directory) {
             name += '/';
           }
           shell.log(`${ name }`);
@@ -622,7 +622,7 @@
       shell.log('SelfNetFS Shell');
       const api_root = localStorage.getItem('snfs_api_root');
       const session_token = localStorage.getItem('snfs_session_token');
-      api = new SNFS.SNFSHttp(api_root);
+      api = new SNFS.Http(api_root);
       if (session_token != null) {
         shell.log(`Resuming session...`);
         try {
