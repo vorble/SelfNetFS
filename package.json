@@ -1,8 +1,10 @@
 {
   "name": "selfnetfs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "selfnetfs",
-  "files": [ "dist" ],
+  "files": [
+    "dist"
+  ],
   "main": "dist/browser/index.js",
   "types": "dist/browser/index.d.ts",
   "scripts": {
