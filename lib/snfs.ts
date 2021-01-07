@@ -22,7 +22,11 @@ export abstract class Session {
   abstract fsadd(options: FsaddOptions): Promise<FSInfo>;
   abstract fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo>;
   abstract fsdel(fsno: string): Promise<FsdelResult>;
+  // XXX: Use fslist to show all file systems a user has access to.
   abstract fslist(): Promise<FSInfo[]>;
+
+  // XXX: For granting a user access to a file system.
+  abstract grant(userno: string, options: GrantOptions): Promise<GrantResult>;
 }
 
 export abstract class FileSystem {
@@ -78,6 +82,8 @@ export interface FsgetOptions {
   union?: string[]; // Array of fsno
 }
 
+// XXX: Split off a new interface, FslistResult that has this info and additionally
+// XXX: a writeable flag. Return FslistResult[] from fslist().
 export interface FSInfo {
   name: string;
   fsno: string;
@@ -102,6 +108,17 @@ export interface FsmodOptions {
 export interface FSUsage {
   no_files: number;
   bytes_used: number; // BigInt maybe?
+}
+
+// XXX: New interface.
+export interface GrantOptions {
+  fs_can_write?: string[];
+  fs_can_union?: string[]; // For when you want to down-grade form writeable or just make it readable.
+  fs_revoke?: string[]; // For when you want to revoke access to a file system.
+}
+
+// XXX: New interface.
+export interface GrantResult {
 }
 
 export interface LoginOptions {
