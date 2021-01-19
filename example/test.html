@@ -9,7 +9,7 @@
   <script>
     'use strict';
 
-    const API_ROOT = 'https://selfnetfs-api.home.arpa/test';
+    const OWNER_URL = 'https://selfnetfs-api.home.arpa/test';
 
     async function makeMemory() {
       const snfs = new SNFS.Memory(SNFS.uuidgen, new SNFS.PasswordModuleNull());
@@ -21,16 +21,16 @@
 
     async function makeHttp() {
       let ses = null;
-      const api_root = localStorage.getItem('snfs_test_api_root') || API_ROOT;
+      const owner_url = localStorage.getItem('snfs_test_owner_url') || OWNER_URL;
       const session_token = localStorage.getItem('snfs_test_session_token');
-      const snfs = new SNFS.Http(api_root);
+      const snfs = new SNFS.Http(owner_url);
       try {
         ses = await snfs.resume(session_token);
         console.log('Successfully resumed session.');
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
-        ses = await snfs.login({ api_root, name: 'admin', password: 'password' });
-        localStorage.setItem('snfs_test_api_root', api_root);
+        ses = await snfs.login({ name: 'admin', password: 'password' });
+        localStorage.setItem('snfs_test_owner_url', owner_url);
         localStorage.setItem('snfs_test_session_token', ses.info().session_token);
       }
       await doCleanup(ses);
@@ -132,7 +132,7 @@
           const fsinfo = await ses.fsadd({ name: 'testing' });
           await ses.useradd({ name: 'guest', password: 'password', fs: fsinfo.fsno  });
         }
-        let ses2 = await snfs.login({ api_root: API_ROOT, name: 'guest', password: 'password' });
+        let ses2 = await snfs.login({ name: 'guest', password: 'password' });
         let fs2 = await ses2.fs();
         {
           const entries = await fs2.readdir('/');

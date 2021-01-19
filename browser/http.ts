@@ -70,16 +70,16 @@ async function apirequest(endpoint: string, payload: any) {
 }
 
 export class Http extends SNFS {
-  _api_root: string;
+  _owner_url: string;
 
-  constructor(api_root: string) {
+  constructor(owner_url: string) {
     super();
 
-    this._api_root = api_root;
+    this._owner_url = owner_url;
   }
 
   async login(options: LoginOptions): Promise<Session> {
-    const result = await apirequest(urljoin(this._api_root, 'login'), {
+    const result = await apirequest(urljoin(this._owner_url, 'login'), {
       name: options.name,
       password: options.password,
     });
@@ -100,7 +100,7 @@ export class Http extends SNFS {
     if (typeof pool !== 'string') {
       throw new SNFSError('Invalid token.');
     }
-    const result = await apirequest(urljoin(this._api_root, pool, 'resume'), {
+    const result = await apirequest(urljoin(this._owner_url, pool, 'resume'), {
     });
     return new SessionHttp(this, pool, result.userno);
   }
@@ -108,7 +108,7 @@ export class Http extends SNFS {
 
 export class SessionHttp extends Session {
   _snfs: Http;
-  _api_root: string;
+  _owner_url: string;
   _userno: string;
   pool: string;
 
@@ -116,7 +116,7 @@ export class SessionHttp extends Session {
     super();
 
     this._snfs = snfs;
-    this._api_root = snfs._api_root;
+    this._owner_url = snfs._owner_url;
     this._userno = userno;
     this.pool = pool;
   }
@@ -131,26 +131,26 @@ export class SessionHttp extends Session {
   }
 
   async detail(): Promise<SessionDetail> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'sesdetail'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'sesdetail'), {
     });
     return result;
   }
 
   async logout(): Promise<LogoutResult> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'logout'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'logout'), {
     });
     return result;
   }
 
   async useradd(options: UseraddOptions): Promise<UserInfo> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'useradd'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'useradd'), {
       options,
     });
     return result;
   }
 
   async usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'usermod'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'usermod'), {
       userno,
       options,
     });
@@ -158,48 +158,48 @@ export class SessionHttp extends Session {
   }
 
   async userdel(userno: string): Promise<UserdelResult> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'userdel'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'userdel'), {
       userno,
     });
     return result;
   }
 
   async userlist(): Promise<UserInfo[]> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'userlist'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'userlist'), {
     });
     return result;
   }
 
   async fs(): Promise<FileSystem> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fs'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fs'), {
     });
-    return new FileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
+    return new FileSystemHttp(this._snfs, this._owner_url, this.pool, result.fs_token, result.fsno, result.union);
   }
 
   async fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsget'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsget'), {
       fsno,
       options,
     });
-    return new FileSystemHttp(this._snfs, this._api_root, this.pool, result.fs_token, result.fsno, result.union);
+    return new FileSystemHttp(this._snfs, this._owner_url, this.pool, result.fs_token, result.fsno, result.union);
   }
 
   async fsresume(fs_token: string): Promise<FileSystem> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsresume'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsresume'), {
       fs_token,
     });
-    return new FileSystemHttp(this._snfs, this._api_root, this.pool, fs_token, result.fsno, result.union);
+    return new FileSystemHttp(this._snfs, this._owner_url, this.pool, fs_token, result.fsno, result.union);
   }
 
   async fsadd(options: FsaddOptions): Promise<FSInfo> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsadd'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsadd'), {
       options,
     });
     return result;
   }
 
   async fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsmod'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsmod'), {
       fsno,
       options,
     });
@@ -207,14 +207,14 @@ export class SessionHttp extends Session {
   }
 
   async fsdel(fsno: string): Promise<FsdelResult> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fsdel'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsdel'), {
       fsno,
     });
     return result;
   }
 
   async fslist(): Promise<FSInfo[]> {
-    const result = await apirequest(urljoin(this._api_root, this.pool, 'fslist'), {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'fslist'), {
     });
     return result;
   }
@@ -222,17 +222,17 @@ export class SessionHttp extends Session {
 
 export class FileSystemHttp extends FileSystem {
   _snfs: Http;
-  _api_root: string;
+  _owner_url: string;
   _pool: string;
   _fs_token: string;
   _fsno: string;
   _union: string[];
 
-  constructor(snfs: Http, api_root: string, pool: string, fs_token: string, fsno: string, union: string[]) {
+  constructor(snfs: Http, owner_url: string, pool: string, fs_token: string, fsno: string, union: string[]) {
     super();
 
     this._snfs = snfs;
-    this._api_root = api_root;
+    this._owner_url = owner_url;
     this._pool = pool;
     this._fs_token = fs_token;
     this._fsno = fsno;
@@ -248,14 +248,14 @@ export class FileSystemHttp extends FileSystem {
   }
 
   async detail(): Promise<FileSystemDetail> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'fsdetail'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'fsdetail'), {
       fs_token: this._fs_token,
     });
     return result;
   }
 
   async readdir(path: string): Promise<ReaddirResult[]> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'readdir'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'readdir'), {
       fs_token: this._fs_token,
       path,
     });
@@ -263,7 +263,7 @@ export class FileSystemHttp extends FileSystem {
   }
 
   async stat(path: string): Promise<StatResult> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'stat'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'stat'), {
       fs_token: this._fs_token,
       path,
     });
@@ -273,7 +273,7 @@ export class FileSystemHttp extends FileSystem {
   }
 
   async writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<WritefileResult> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'writefile'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'writefile'), {
       fs_token: this._fs_token,
       path,
       data: bufferToBase64(data),
@@ -283,7 +283,7 @@ export class FileSystemHttp extends FileSystem {
   }
 
   async readfile(path: string): Promise<ReadfileResult> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'readfile'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'readfile'), {
       fs_token: this._fs_token,
       path,
     });
@@ -292,7 +292,7 @@ export class FileSystemHttp extends FileSystem {
   }
 
   async unlink(path: string): Promise<UnlinkResult> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'unlink'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'unlink'), {
       fs_token: this._fs_token,
       path,
     });
@@ -300,7 +300,7 @@ export class FileSystemHttp extends FileSystem {
   }
 
   async move(path: string, newpath: string): Promise<MoveResult> {
-    const result = await apirequest(urljoin(this._api_root, this._pool, 'move'), {
+    const result = await apirequest(urljoin(this._owner_url, this._pool, 'move'), {
       fs_token: this._fs_token,
       path,
       newpath,
