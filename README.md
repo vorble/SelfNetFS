@@ -84,16 +84,16 @@ let ses = null;
 let fs = null;
 
 async function startup() {
-  const api_root = localStorage.getItem('snfs_api_root') || 'https://selfnetfs-api.home.arpa/myowner';
+  const owner_url = localStorage.getItem('snfs_owner_url') || 'https://selfnetfs-api.home.arpa/myowner';
   const session_token = localStorage.getItem('snfs_session_token');
-  api = new SNFS.Http(api_root);
+  api = new SNFS.Http(owner_url);
   try {
     ses = await api.resume(session_token);
     console.log('Successfully resumed session.');
   } catch (err) {
     console.log('Couldn\'t resume, logging in again.');
     ses = await api.login({ name: 'myuser', password: 'password' });
-    localStorage.setItem('snfs_api_root', api_root);
+    localStorage.setItem('snfs_owner_url', owner_url);
     localStorage.setItem('snfs_session_token', ses.info().session_token);
   }
   fs = await ses.fs();
