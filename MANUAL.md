@@ -9,12 +9,34 @@ SelfNetFS is a JavaScript library developed in TypeScript.
 A working knowledge of JavaScript will be required to make the most of this manual.
 Example code is provided in JavaScript.
 
-## Session Management
+## Owner/User
 
-* `login(options)` - Log in. `options` are:
-  - `name` - `string`, the name of the user you are logging in with.
-  - `password` - `string`, the password to attempt to establish a session with.
-* `resume(session_token) - Log in again with the token from a previous successful `login()`.
+<!-- TODO: Describe what an owner is. -->
+<!-- TODO: Describe what a user is. -->
+
+<!-- TODO: "instance"? Not a good word here -->
+An instance of SelfNetFS is referenced by an owner URL.
+For example, `https://selfnetfs-api.home.arpa/myowner`.
+
+Parts of the URL:
+
+* `https://` - Indicates that the URL is for a secure HTTP endpoint.
+  `https://` is required, `http://` will likely cause security issues with the browser
+  and the library will not work correctly.
+* `selfnetfs-api.home.arpa` - Indicates the host that the library will be communicating with.
+  Typically this will be an host on the public internet, but can be valid host is allowed.
+* `myowner` - Indicates the owner name.
+  This is used to differentiate between separate owners on a single server.
+
+## API
+
+You begin interacting with SelfNetFS with the `SNFS.Http` class.
+
+```javascript
+const api = new SNFS.Http(api_root);
+```
+
+## Session Management
 
 ## User Operations
 
