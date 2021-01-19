@@ -29,7 +29,7 @@
         console.log('Successfully resumed session.');
       } catch (err) {
         console.log('Couldn\'t resume, logging in again.');
-        ses = await snfs.login({ owner_url, name: 'admin', password: 'password' });
+        ses = await snfs.login({ name: 'admin', password: 'password' });
         localStorage.setItem('snfs_test_owner_url', owner_url);
         localStorage.setItem('snfs_test_session_token', ses.info().session_token);
       }
@@ -132,7 +132,7 @@
           const fsinfo = await ses.fsadd({ name: 'testing' });
           await ses.useradd({ name: 'guest', password: 'password', fs: fsinfo.fsno  });
         }
-        let ses2 = await snfs.login({ owner_url: OWNER_URL, name: 'guest', password: 'password' });
+        let ses2 = await snfs.login({ name: 'guest', password: 'password' });
         let fs2 = await ses2.fs();
         {
           const entries = await fs2.readdir('/');
