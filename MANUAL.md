@@ -32,19 +32,52 @@ Parts of the URL:
 
 ### Class `SNFS.Http`
 
-You begin interacting with SelfNetFS with the `SNFS.Http` class.
+You begin interacting with SelfNetFS with the `SNFS.Http` class. To create a
+new instance of this class, you will need the owner URL.
 
 ```javascript
 const api = new SNFS.Http(owner_url);
 ```
 
-The following methods are available on the `api` object:
+As a convention, the variable named `api` is used to represent an instance of
+this class throughout this document.
 
-* `login(options)`
-  - `options.name` - **string** - The user name.
-  - `options.password` - **string** - The user's password.
-* `resume(session_token)`
-  - `session_token` - **string** - A session to resume.
+#### Method `login(options)`
+
+Attempt to log in as a particular user.
+
+* `options.name` - **string** - The user name.
+* `options.password` - **string** - The user's password.
+
+Return value:
+
+* Will throw a `SNFS.SNFSError` error upon failure to log in.
+* Will return a `SNFS.SNFSSession` object upon success.
+
+Example:
+
+```javascript
+ses = await api.login({ name: 'someuser', password: 'somepass' });
+```
+
+#### Method `resume(session_token)`
+
+Attempt to resume a session from a token retrieved from a previously
+established session.
+
+* `session_token` - **string** - A session to resume.
+
+Return value:
+
+* Will throw a `SNFS.SNFSError` error upon failure to log in.
+* Will return a `SNFS.SNFSSession` object upon success.
+
+Example:
+
+```javascript
+session_token = localStorage.getItem('snfs_session_token');
+ses = await api.resume(session_token);
+```
 
 ## Session Management
 
