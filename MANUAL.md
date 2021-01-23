@@ -11,12 +11,20 @@ Example code is provided in JavaScript.
 
 ## Owner/User
 
-<!-- TODO: Describe what an owner is. -->
-<!-- TODO: Describe what a user is. -->
+The term "owner" is used to make a distinction between the individual using
+SelfNetFS and separate "user" accounts that they manage for the same pool of
+data.
 
-<!-- TODO: "instance"? Not a good word here -->
-An instance of SelfNetFS is referenced by an owner URL.
-For example, `https://selfnetfs-api.home.arpa/myowner`.
+In practice, the "owner" is yourself and access to file storage is available
+over HTTP via an owner URL. For example, your owner URL might be
+`https://selfnetfs-api.home.arpa/myowner`.
+
+With the owner URL, an HTTP request can be made to log in as a particular
+"user". "user," in this case, refers more to a specific web application using
+SelfNetFS. For example, you might have a user account for a web application you
+trust and an user account for a web application you are trying out for the
+first time. Note: the HTTP requests are encapsulated in the SelfNetFS
+JavaScript API.
 
 Parts of the URL:
 
@@ -28,7 +36,22 @@ Parts of the URL:
 * `myowner` - Indicates the owner name.
   This is used to differentiate between separate owners on a single server.
 
-## API
+## Session Management
+
+### Life Cycle
+
+<!-- TODO: Discuss logging in, leaving the page, resuming a session, and logging out -->
+
+## User Operations
+
+* `userlist()`
+* `useradd()`
+* `usermod()`
+* `userdel()`
+
+## File System Operations
+
+## Reference
 
 ### Class `SNFS.Http`
 
@@ -36,11 +59,11 @@ You begin interacting with SelfNetFS with the `SNFS.Http` class. To create a
 new instance of this class, you will need the owner URL.
 
 ```javascript
-const api = new SNFS.Http(owner_url);
+api = new SNFS.Http(owner_url);
 ```
 
 As a convention, the variable named `api` is used to represent an instance of
-this class throughout this document.
+the `SNFS.Http` class throughout this document.
 
 #### Method `login(options)`
 
@@ -52,13 +75,16 @@ Attempt to log in as a particular user.
 Return value:
 
 * Will throw a `SNFS.SNFSError` error upon failure to log in.
-* Will return a `SNFS.SNFSSession` object upon success.
+* Will return a `SNFS.Session` object upon success.
 
 Example:
 
 ```javascript
 ses = await api.login({ name: 'someuser', password: 'somepass' });
 ```
+
+As a convention, the variable named `ses` is used to represent an instance of
+the `SNFS.Session` class throughout this document.
 
 #### Method `resume(session_token)`
 
@@ -70,7 +96,7 @@ established session.
 Return value:
 
 * Will throw a `SNFS.SNFSError` error upon failure to log in.
-* Will return a `SNFS.SNFSSession` object upon success.
+* Will return a `SNFS.Session` object upon success.
 
 Example:
 
@@ -79,13 +105,13 @@ session_token = localStorage.getItem('snfs_session_token');
 ses = await api.resume(session_token);
 ```
 
-## Session Management
+As a convention, the variable named `ses` is used to represent an instance of
+the `SNFS.Session` class throughout this document.
 
-## User Operations
+### Class `SNFS.Session`
 
-* `userlist()`
-* `useradd()`
-* `usermod()`
-* `userdel()`
+See class `SNFS.Http` for details on acquiring instances of this class.
 
-## File System Operations
+### Class `SNFS.FileSystem`
+
+See class `SNFS.Session` for details on acquiring instances of this class.
