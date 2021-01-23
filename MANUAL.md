@@ -30,14 +30,29 @@ Parts of the URL:
 
 ## API
 
+### Class `SNFS.Http`
+
 You begin interacting with SelfNetFS with the `SNFS.Http` class.
 
 ```javascript
-const api = new SNFS.Http(api_root);
+const api = new SNFS.Http(owner_url);
 ```
+
+The following methods are available on the `api` object:
+
+* `login(options)`
+  - `options.name` - *string* - The user name.
+  - `options.password` - *string* - The user's password.
+* `resume(session_token)`
+  - `session_token` - *string* - A session to resume.
 
 ## Session Management
 
 ## User Operations
+
+* `userlist()`
+* `useradd()`
+* `usermod()`
+* `userdel()`
 
 ## File System Operations
