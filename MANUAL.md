@@ -19,12 +19,11 @@ In practice, the "owner" is yourself and access to file storage is available
 over HTTP via an owner URL. For example, your owner URL might be
 `https://selfnetfs-api.home.arpa/myowner`.
 
-With the owner URL, an HTTP request can be made to log in as a particular
+With the owner URL, a request can be made to log in as a particular
 "user". "user," in this case, refers more to a specific web application using
 SelfNetFS. For example, you might have a user account for a web application you
-trust and an user account for a web application you are trying out for the
-first time. Note: the HTTP requests are encapsulated in the SelfNetFS
-JavaScript API.
+trust and a user account for a web application you are trying out for the
+first time.
 
 Parts of the URL:
 
@@ -32,7 +31,7 @@ Parts of the URL:
   `https://` is required, `http://` will likely cause security issues with the browser
   and the library will not work correctly.
 * `selfnetfs-api.home.arpa` - Indicates the host that the library will be communicating with.
-  Typically this will be an host on the public internet, but can be valid host is allowed.
+  Typically this will be a host on the public internet, but can be valid host is allowed.
 * `myowner` - Indicates the owner name.
   This is used to differentiate between separate owners on a single server.
 
