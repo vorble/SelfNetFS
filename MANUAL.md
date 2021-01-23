@@ -41,10 +41,10 @@ const api = new SNFS.Http(owner_url);
 The following methods are available on the `api` object:
 
 * `login(options)`
-  - `options.name` - *string* - The user name.
-  - `options.password` - *string* - The user's password.
+  - `options.name` - **string** - The user name.
+  - `options.password` - **string** - The user's password.
 * `resume(session_token)`
-  - `session_token` - *string* - A session to resume.
+  - `session_token` - **string** - A session to resume.
 
 ## Session Management
 
