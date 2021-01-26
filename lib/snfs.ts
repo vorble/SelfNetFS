@@ -19,14 +19,14 @@ export abstract class Session {
   abstract fs(): Promise<FileSystem>;
   abstract fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem>;
   abstract fsresume(fs_token: string): Promise<FileSystem>;
-  abstract fsadd(options: FsaddOptions): Promise<FSInfo>;
-  abstract fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo>;
+  abstract fsadd(options: FsaddOptions): Promise<FsaddResult>;
+  abstract fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult>;
   abstract fsdel(fsno: string): Promise<FsdelResult>;
   // XXX: Use fslist to show all file systems a user has access to.
-  abstract fslist(): Promise<FSInfo[]>;
+  abstract fslist(): Promise<FslistResult[]>;
 
   // XXX: For granting a user access to a file system.
-  abstract grant(userno: string, options: GrantOptions): Promise<GrantResult>;
+  //abstract grant(userno: string, options: GrantOptions): Promise<GrantResult>;
 }
 
 export abstract class FileSystem {
@@ -67,6 +67,12 @@ export interface FsaddOptions {
   max_path?: number;
 }
 
+export interface FsaddResult {
+  name: string;
+  fsno: string;
+  limits: FSLimits;
+}
+
 export interface FsdelResult {
 }
 
@@ -82,19 +88,18 @@ export interface FsgetOptions {
   union?: string[]; // Array of fsno
 }
 
-// XXX: Split off a new interface, FslistResult that has this info and additionally
-// XXX: a writeable flag. Return FslistResult[] from fslist().
-export interface FSInfo {
-  name: string;
-  fsno: string;
-  limits: FSLimits;
-}
-
 export interface FSLimits {
   max_files: number;
   max_storage: number;
   max_depth: number;
   max_path: number;
+}
+
+// XXX: add a writeable flag
+export interface FslistResult {
+  name: string;
+  fsno: string;
+  limits: FSLimits;
 }
 
 export interface FsmodOptions {
@@ -103,6 +108,12 @@ export interface FsmodOptions {
   max_storage?: number;
   max_depth?: number;
   max_path?: number;
+}
+
+export interface FsmodResult {
+  name: string;
+  fsno: string;
+  limits: FSLimits;
 }
 
 export interface FSUsage {

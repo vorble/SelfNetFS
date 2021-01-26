@@ -1,14 +1,16 @@
 import {
   FSDetail,
-  FSInfo,
   FSLimits,
   FileSystem,
   FileSystemDetail,
   FileSystemInfo,
   FsaddOptions,
+  FsaddResult,
   FsdelResult,
   FsgetOptions,
+  FslistResult,
   FsmodOptions,
+  FsmodResult,
   LoginOptions,
   LogoutResult,
   MoveResult,
@@ -109,7 +111,9 @@ function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallbac
   return limits;
 }
 
-function fileSystemToInfo(fs: FileSystemMemory): FSInfo {
+// XXX: This will have to be broken up when FslistResult acquires the new writeable flag.
+// XXX: Also, rename the function.
+function fileSystemToInfo(fs: FileSystemMemory): FsaddResult | FsmodResult | FslistResult {
   return {
     name: fs._name,
     fsno: fs._fsno,
@@ -463,7 +467,7 @@ export class SessionMemory extends Session {
     return this.fsget(fsno, { union, writeable });
   }
 
-  fsadd(options: FsaddOptions): Promise<FSInfo> {
+  fsadd(options: FsaddOptions): Promise<FsmodResult> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -478,7 +482,7 @@ export class SessionMemory extends Session {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo> {
+  fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
@@ -526,7 +530,7 @@ export class SessionMemory extends Session {
     return Promise.resolve({});
   }
 
-  fslist(): Promise<FSInfo[]> {
+  fslist(): Promise<FslistResult[]> {
     const logged_in_user = this._lookup_user();
     if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._fss.map(fileSystemToInfo));

@@ -1,13 +1,15 @@
 import {
-  FSInfo,
   FSLimits,
   FileSystem,
   FileSystemDetail,
   FileSystemInfo,
   FsaddOptions,
+  FsaddResult,
   FsdelResult,
   FsgetOptions,
+  FslistResult,
   FsmodOptions,
+  FsmodResult,
   LoginOptions,
   LogoutResult,
   MoveResult,
@@ -191,14 +193,14 @@ export class SessionHttp extends Session {
     return new FileSystemHttp(this._snfs, this._owner_url, this.pool, fs_token, result.fsno, result.union);
   }
 
-  async fsadd(options: FsaddOptions): Promise<FSInfo> {
+  async fsadd(options: FsaddOptions): Promise<FsaddResult> {
     const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsadd'), {
       options,
     });
     return result;
   }
 
-  async fsmod(fsno: string, options: FsmodOptions): Promise<FSInfo> {
+  async fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
     const result = await apirequest(urljoin(this._owner_url, this.pool, 'fsmod'), {
       fsno,
       options,
@@ -213,7 +215,7 @@ export class SessionHttp extends Session {
     return result;
   }
 
-  async fslist(): Promise<FSInfo[]> {
+  async fslist(): Promise<FslistResult[]> {
     const result = await apirequest(urljoin(this._owner_url, this.pool, 'fslist'), {
     });
     return result;
