@@ -111,9 +111,8 @@ function fileSystemOptionsToLimits(options: FsmodOptions | FsaddOptions, fallbac
   return limits;
 }
 
-// XXX: This will have to be broken up when FslistResult acquires the new writeable flag.
-// XXX: Also, rename the function.
-function fileSystemToInfo(fs: FileSystemMemory): FsaddResult | FsmodResult | FslistResult {
+// XXX: Rename the function?
+function fileSystemToInfo(fs: FileSystemMemory): FsaddResult | FsmodResult {
   return {
     name: fs._name,
     fsno: fs._fsno,
@@ -171,6 +170,8 @@ export class Memory extends SNFS {
       password: this._password_module.hash(password),
       fs: fs,
       union: [],
+      writeable: [fs],
+      unionable: [],
     };
     this._fss.push(fs);
     this._users.push(user);
@@ -307,6 +308,8 @@ export class SessionMemory extends Session {
       password: this._snfs._password_module.hash(options.password),
       fs,
       union,
+      writeable: fs == null ? [] : [fs],
+      unionable: union,
     };
     this._snfs._users.push(user);
     return Promise.resolve(userRecordToUserInfo(user));
@@ -530,16 +533,30 @@ export class SessionMemory extends Session {
     return Promise.resolve({});
   }
 
+  // XXX: Work to be done here: this method should list all file systems that
+  // the user can write or union with, not just the user's default fs/union.
+  // however, as it stands at this moment there is no permission storage structure.
+  // I need to create a class which holds mappings of files systems and users
+  // for permission managemnt (rather than having the permissions on either the
+  // user object or the file system objects themselves).
   fslist(): Promise<FslistResult[]> {
     const logged_in_user = this._lookup_user();
+    function fileSystemToFslistResult(fs: FileSystemMemory): FslistResult {
+      return {
+        name: fs._name,
+        fsno: fs._fsno,
+        limits: { ...fs._limits },
+        writeable: logged_in_user.admin || logged_in_user.writeable.indexOf(fs) >= 0,
+      };
+    }
     if (logged_in_user.admin) {
-      return Promise.resolve(this._snfs._fss.map(fileSystemToInfo));
+      return Promise.resolve(this._snfs._fss.map(fileSystemToFslistResult));
     } else {
       const result = [
         ...logged_in_user.union,
-      ].map(fileSystemToInfo);
+      ].map(fileSystemToFslistResult);
       if (logged_in_user.fs != null) {
-        result.unshift(fileSystemToInfo(logged_in_user.fs));
+        result.unshift(fileSystemToFslistResult(logged_in_user.fs));
       }
       return Promise.resolve(result);
     }
@@ -1016,6 +1033,9 @@ interface UserRecord {
   admin: boolean;
   fs: FileSystemMemory | null;
   union: FileSystemMemory[];
+  // XXX: writeable and unionable values will be integrated into a permission structure.
+  writeable: FileSystemMemory[];
+  unionable: FileSystemMemory[];
 }
 
 interface FileRecord {

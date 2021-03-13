@@ -22,7 +22,6 @@ export abstract class Session {
   abstract fsadd(options: FsaddOptions): Promise<FsaddResult>;
   abstract fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult>;
   abstract fsdel(fsno: string): Promise<FsdelResult>;
-  // XXX: Use fslist to show all file systems a user has access to.
   abstract fslist(): Promise<FslistResult[]>;
 
   // XXX: For granting a user access to a file system.
@@ -95,11 +94,11 @@ export interface FSLimits {
   max_path: number;
 }
 
-// XXX: add a writeable flag
 export interface FslistResult {
   name: string;
   fsno: string;
   limits: FSLimits;
+  writeable: boolean;
 }
 
 export interface FsmodOptions {
