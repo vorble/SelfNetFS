@@ -30,11 +30,11 @@ import {
   UsermodOptions,
   WritefileOptions,
   WritefileResult,
-} from './snfs';
+} from '../snfs';
 import {
   PasswordModule,
   PasswordModuleNull,
-} from './password';
+} from '../password';
 
 const LIMITS = {
   max_files: 200,
