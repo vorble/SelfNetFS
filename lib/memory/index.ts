@@ -35,6 +35,9 @@ import {
   PasswordModule,
   PasswordModuleNull,
 } from '../password';
+import {
+  PermissionSet
+} from './permissions';
 
 const LIMITS = {
   max_files: 200,
@@ -137,6 +140,7 @@ export class Memory extends SNFS {
   _password_module: PasswordModule;
   _fss: FileSystemMemory[];
   _users: UserRecord[];
+  _permissions: PermissionSet;
 
   constructor(uuidgen: () => string, password_module: PasswordModule) {
     super();
@@ -145,6 +149,7 @@ export class Memory extends SNFS {
     this._password_module = password_module;
     this._fss = [];
     this._users = [];
+    this._permissions = new PermissionSet();
   }
 
   _uuidgen_unique_fsno(): string {
@@ -155,6 +160,22 @@ export class Memory extends SNFS {
   _uuidgen_unique_userno(): string {
     return uuidgen_unique(this._uuidgen,
       (userno: string) => this._users.find(user => user.userno == userno) != null);
+  }
+
+  _fsfind(fsno: string): FileSystemMemory {
+    const fs = this._fss.find(fs => fs._fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('FS not found.');
+    }
+    return fs;
+  }
+
+  _fsfind_union(fsno: string): FileSystemMemory {
+    const fs = this._fss.find(fs => fs._fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('FS not found for union.');
+    }
+    return fs;
   }
 
   // just for in-memory implementation.
@@ -175,6 +196,12 @@ export class Memory extends SNFS {
     };
     this._fss.push(fs);
     this._users.push(user);
+    this._permissions.set({
+      userno: user.userno,
+      fsno: fs._fsno,
+      writeable: true,
+      unionable: true,
+    });
   }
 
   _lookup_user(userno: string): UserRecord | null {
@@ -262,6 +289,7 @@ export class SessionMemory extends Session {
     return Promise.resolve({});
   }
 
+  // XXX: Needs review for new permissions.
   useradd(options: UseraddOptions): Promise<UserInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
@@ -315,6 +343,7 @@ export class SessionMemory extends Session {
     return Promise.resolve(userRecordToUserInfo(user));
   }
 
+  // XXX: Needs review for new permissions.
   usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
@@ -402,46 +431,50 @@ export class SessionMemory extends Session {
     if (fs == null) {
       throw new SNFSError('User has no FS.');
     }
-    const writeable = true; // File system is writeable by virtue of being assigned the the user.
+    const writeable = true; // File system is writeable by virtue of being assigned to the user.
     return Promise.resolve(new FileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
   }
 
-  fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem> {
-    options = { ...options };
-    if (options.union == null) {
-      options.union = [];
-    }
-    if (options.writeable == null) {
-      options.writeable = true;
-    }
-    const logged_in_user = this._lookup_user();
-    if (!logged_in_user.admin) {
-      const fsnos = [fsno, ...options.union];
-      for (const fsno of fsnos) {
-        if (fsno != (logged_in_user.fs || {})._fsno
-            && null == logged_in_user.union.find(ufs => ufs._fsno == fsno)) {
-            throw new SNFSError('Access denied.');
-        }
-      }
-      if (null != logged_in_user.union.find(ufs => ufs._fsno == fsno)) {
-        options.writeable = false;
-      }
-    }
-    const fs = this._snfs._fss.find(fs => fs._fsno == fsno);
-    if (fs == null) {
-      throw new SNFSError('FS not found.');
-    }
-    const union = [];
-    for (const ufsno of options.union) {
-      const ufs = this._snfs._fss.find(fs => fs._fsno == ufsno);
-      if (ufs == null) {
-        throw new SNFSError('FS not found for union.');
-      }
-      union.push(ufs);
-    }
-    return Promise.resolve(new FileSystemMemoryUnion(fs, union, options.writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
+  _fsget_defaults(o?: FsgetOptions): FsgetOptionsFull {
+    return {
+      ...o,
+      union: (o||{}).union || [],
+      writeable: (o||{}).writeable || false, // t->t, f->f, n->f
+    };
   }
 
+  _fsget_check_access(fs: FileSystemMemory, writeable: boolean) {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
+      const perm = this._snfs._permissions.get({
+        userno: logged_in_user.userno,
+        fsno: fs._fsno,
+      });
+      if (!perm.unionable) {
+        throw new SNFSError('Access denied.');
+      }
+      if (writeable && !perm.writeable) {
+        throw new SNFSError('Access denied.');
+      }
+    }
+  }
+
+  fsget(fsno: string, o?: FsgetOptions): Promise<FileSystem> {
+    const options = this._fsget_defaults(o);
+    const fs = this._snfs._fsfind(fsno);
+    this._fsget_check_access(fs, options.writeable);
+    const union = options.union.map(fsno => {
+      const fs = this._snfs._fsfind_union(fsno);
+      this._fsget_check_access(fs, false);
+      return fs;
+    });
+    // TODO: Restructure to remove the need to pass the user
+    // to the FileSystemMemoryUnion constructor.
+    return Promise.resolve(new FileSystemMemoryUnion(fs, union, options.writeable,
+      this._snfs._uuidgen, this._lookup_user(), this._snfs));
+  }
+
+  // XXX: Needs review for new permissions.
   fsresume(fs_token: string): Promise<FileSystem> {
     let tok = null;
     try {
@@ -533,31 +566,24 @@ export class SessionMemory extends Session {
     return Promise.resolve({});
   }
 
-  // XXX: Work to be done here: this method should list all file systems that
-  // the user can write or union with, not just the user's default fs/union.
-  // however, as it stands at this moment there is no permission storage structure.
-  // I need to create a class which holds mappings of files systems and users
-  // for permission managemnt (rather than having the permissions on either the
-  // user object or the file system objects themselves).
   fslist(): Promise<FslistResult[]> {
     const logged_in_user = this._lookup_user();
-    function fileSystemToFslistResult(fs: FileSystemMemory): FslistResult {
+    const fileSystemToFslistResult = (fs: FileSystemMemory): FslistResult => {
+      const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
       return {
         name: fs._name,
         fsno: fs._fsno,
         limits: { ...fs._limits },
-        writeable: logged_in_user.admin || logged_in_user.writeable.indexOf(fs) >= 0,
+        writeable: logged_in_user.admin || perm.writeable,
       };
-    }
+    };
     if (logged_in_user.admin) {
       return Promise.resolve(this._snfs._fss.map(fileSystemToFslistResult));
     } else {
-      const result = [
-        ...logged_in_user.union,
-      ].map(fileSystemToFslistResult);
-      if (logged_in_user.fs != null) {
-        result.unshift(fileSystemToFslistResult(logged_in_user.fs));
-      }
+      const result = this._snfs._fss.filter((fs: FileSystemMemory) => {
+        const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
+        return perm.unionable;
+      }).map(fileSystemToFslistResult);
       return Promise.resolve(result);
     }
   }
@@ -1033,9 +1059,6 @@ interface UserRecord {
   admin: boolean;
   fs: FileSystemMemory | null;
   union: FileSystemMemory[];
-  // XXX: writeable and unionable values will be integrated into a permission structure.
-  writeable: FileSystemMemory[];
-  unionable: FileSystemMemory[];
 }
 
 interface FileRecord {
@@ -1044,4 +1067,9 @@ interface FileRecord {
   ctime: Date;
   mtime: Date;
   data: Uint8Array;
+}
+
+interface FsgetOptionsFull extends FsgetOptions {
+  writeable: boolean;
+  union: string[];
 }
