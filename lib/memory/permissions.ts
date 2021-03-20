@@ -16,6 +16,10 @@ export class PermissionSet {
     this._permissions = [];
   }
 
+  userdel(userno: string) {
+    this._permissions = this._permissions.filter((p: PermissionRecord) => p.userno != userno);
+  }
+
   set(record: PermissionRecord) {
     const index = this._permissions.findIndex((p: PermissionRecord) => p.userno == record.userno && p.fsno == record.fsno);
     if (index >= 0) {

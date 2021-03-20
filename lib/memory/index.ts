@@ -162,22 +162,6 @@ export class Memory extends SNFS {
       (userno: string) => this._users.find(user => user.userno == userno) != null);
   }
 
-  _fsfind(fsno: string): FileSystemMemory {
-    const fs = this._fss.find(fs => fs._fsno == fsno);
-    if (fs == null) {
-      throw new SNFSError('FS not found.');
-    }
-    return fs;
-  }
-
-  _fsfind_union(fsno: string): FileSystemMemory {
-    const fs = this._fss.find(fs => fs._fsno == fsno);
-    if (fs == null) {
-      throw new SNFSError('FS not found for union.');
-    }
-    return fs;
-  }
-
   // just for in-memory implementation.
   bootstrap(name: string, password: string): void {
     if (this._fss.length != 0 || this._users.length != 0) {
@@ -266,6 +250,71 @@ export class SessionMemory extends Session {
     return logged_in_user;
   }
 
+  _userfind(userno: string): UserRecord {
+    const user = this._snfs._users.find(u => u.userno == userno);
+    if (user == null) {
+      throw new SNFSError('User not found.');
+    }
+    return user;
+  }
+
+  _usersearch(): UserRecord[] {
+    if (this._logged_in_userno == null) {
+      return [];
+    }
+    const logged_in_user = this._snfs._lookup_user(this._logged_in_userno);
+    if (logged_in_user == null) {
+      return [];
+    }
+    if (logged_in_user.admin) {
+      return this._snfs._users;
+    }
+    return [logged_in_user];
+  }
+
+  _fsfind(fsno: string): FileSystemMemory {
+    const logged_in_user = this._lookup_user();
+    const fs = this._snfs._fss.find(fs => fs._fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('FS not found.');
+    }
+    if (!logged_in_user.admin) {
+      const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
+      // TODO: Wish I had a "visible" permission.
+      if (!perm.unionable) {
+        throw new SNFSError('FS not found.');
+      }
+    }
+    return fs;
+  }
+
+  _fsfind_union(fsno: string): FileSystemMemory {
+    const logged_in_user = this._lookup_user();
+    const fs = this._snfs._fss.find(fs => fs._fsno == fsno);
+    if (fs == null) {
+      throw new SNFSError('FS not found for union.');
+    }
+    if (!logged_in_user.admin) {
+      const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
+      // TODO: Wish I had a "visible" permission.
+      if (!perm.unionable) {
+        throw new SNFSError('FS not found for union.');
+      }
+    }
+    return fs;
+  }
+
+  _fssearch(): FileSystemMemory[] {
+    const logged_in_user = this._lookup_user();
+    return this._snfs._fss.filter(fs => {
+      if (logged_in_user.admin) {
+        return true;
+      }
+      const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
+      return perm.unionable;
+    });
+  }
+
   info(): SessionInfo {
     if (this._logged_in_userno == null) {
       throw new SNFSError('Not logged in.');
@@ -290,11 +339,15 @@ export class SessionMemory extends Session {
   }
 
   // XXX: Needs review for new permissions.
-  useradd(options: UseraddOptions): Promise<UserInfo> {
+  _useradd_check_access() {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
+  }
+
+  useradd(options: UseraddOptions): Promise<UserInfo> {
+    this._useradd_check_access();
     if (this._snfs._users.find(u => u.name == options.name)) {
       throw new SNFSError('User already exists.');
     }
@@ -306,19 +359,13 @@ export class SessionMemory extends Session {
       if (options.fs == null) {
         fs = null;
       } else {
-        fs = this._snfs._fss.find(f => f._fsno == options.fs);
-        if (fs == null) {
-          throw new SNFSError('FS not found.');
-        }
+        fs = this._fsfind(options.fs);
         seen_fsnos.push(fs._fsno);
       }
     }
     if (typeof options.union !== 'undefined') {
       for (const ufsno of options.union) {
-        const u = this._snfs._fss.find(f => f._fsno == ufsno);
-        if (u == null) {
-          throw new SNFSError('FS not found.');
-        }
+        const u = this._fsfind_union(ufsno);
         if (seen_fsnos.indexOf(u._fsno) >= 0) {
           throw new SNFSError('Duplicate fs in union.');
         }
@@ -343,16 +390,16 @@ export class SessionMemory extends Session {
     return Promise.resolve(userRecordToUserInfo(user));
   }
 
-  // XXX: Needs review for new permissions.
-  usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
+  _usermod_check_access() {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    const user = this._snfs._users.find(u => u.userno == userno);
-    if (user == null) {
-      throw new SNFSError('User not found.');
-    }
+  }
+
+  usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
+    this._usermod_check_access();
+    const user = this._userfind(userno);
     const new_user = { ...user };
     if (typeof options.name !== 'undefined' && options.name != user.name) {
       const existing = this._snfs._users.find(u => u.name == options.name);
@@ -372,10 +419,7 @@ export class SessionMemory extends Session {
       if (options.fs == null) {
         new_user.fs = null;
       } else {
-        const fs = this._snfs._fss.find(f => f._fsno == options.fs);
-        if (fs == null) {
-          throw new SNFSError('FS not found.');
-        }
+        const fs = this._fsfind(options.fs);
         seen_fsnos.push(fs._fsno);
         new_user.fs = fs;
       }
@@ -383,10 +427,7 @@ export class SessionMemory extends Session {
     if (typeof options.union !== 'undefined') {
       const union = [];
       for (const ufsno of options.union) {
-        const u = this._snfs._fss.find(f => f._fsno == ufsno);
-        if (u == null) {
-          throw new SNFSError('FS not found.');
-        }
+        const u = this._fsfind(ufsno);
         if (seen_fsnos.indexOf(u._fsno) >= 0) {
           throw new SNFSError('Duplicate fs in union.');
         }
@@ -400,29 +441,26 @@ export class SessionMemory extends Session {
     return Promise.resolve(userRecordToUserInfo(new_user));
   }
 
-  userdel(userno: string): Promise<UserdelResult> {
+  _userdel_check_access() {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
+  }
+
+  userdel(userno: string): Promise<UserdelResult> {
+    this._userdel_check_access();
+    const logged_in_user = this._lookup_user();
     if (logged_in_user.userno == userno) {
       throw new SNFSError('Cannot delete logged in user.');
     }
-    const user = this._snfs._users.find(u => u.userno == userno);
-    if (user == null) {
-      throw new SNFSError('User not found.');
-    }
+    const user = this._userfind(userno);
     this._snfs._users = this._snfs._users.filter(u => u.userno != userno);
     return Promise.resolve({});
   }
 
   userlist(): Promise<UserInfo[]> {
-    const logged_in_user = this._lookup_user();
-    if (logged_in_user.admin) {
-      return Promise.resolve(this._snfs._users.map(userRecordToUserInfo));
-    } else {
-      return Promise.resolve([userRecordToUserInfo(logged_in_user)]);
-    }
+    return Promise.resolve(this._usersearch().map(userRecordToUserInfo));
   }
 
   fs(): Promise<FileSystem> {
@@ -444,6 +482,10 @@ export class SessionMemory extends Session {
   }
 
   _fsget_check_access(fs: FileSystemMemory, writeable: boolean) {
+    // TODO: Since the permission information is moving out
+    // from the user objects, there might not be a need to
+    // do _lookup_user() everywhere. But how would you handle
+    // admin checks?
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       const perm = this._snfs._permissions.get({
@@ -451,30 +493,32 @@ export class SessionMemory extends Session {
         fsno: fs._fsno,
       });
       if (!perm.unionable) {
-        throw new SNFSError('Access denied.');
+        throw new SNFSError('Not authorized.');
       }
       if (writeable && !perm.writeable) {
-        throw new SNFSError('Access denied.');
+        throw new SNFSError('Not authorized.');
       }
     }
   }
 
   fsget(fsno: string, o?: FsgetOptions): Promise<FileSystem> {
     const options = this._fsget_defaults(o);
-    const fs = this._snfs._fsfind(fsno);
+    const fs = this._fsfind(fsno);
     this._fsget_check_access(fs, options.writeable);
     const union = options.union.map(fsno => {
-      const fs = this._snfs._fsfind_union(fsno);
+      const fs = this._fsfind_union(fsno);
       this._fsget_check_access(fs, false);
       return fs;
     });
     // TODO: Restructure to remove the need to pass the user
     // to the FileSystemMemoryUnion constructor.
+    // TODO: Since this._snfs is passed to FileSystemMemoryUnion
+    // constructor, I don't need to also pass the uuidgen
+    // function.
     return Promise.resolve(new FileSystemMemoryUnion(fs, union, options.writeable,
       this._snfs._uuidgen, this._lookup_user(), this._snfs));
   }
 
-  // XXX: Needs review for new permissions.
   fsresume(fs_token: string): Promise<FileSystem> {
     let tok = null;
     try {
@@ -503,11 +547,15 @@ export class SessionMemory extends Session {
     return this.fsget(fsno, { union, writeable });
   }
 
-  fsadd(options: FsaddOptions): Promise<FsmodResult> {
+  _fsadd_check_access() {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
+  }
+
+  fsadd(options: FsaddOptions): Promise<FsmodResult> {
+    this._fsadd_check_access();
     if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
     }
@@ -518,15 +566,16 @@ export class SessionMemory extends Session {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
+  _fsmod_check_access() {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
-    const fs = this._snfs._fss.find(f => f._fsno == fsno);
-    if (fs == null) {
-      throw new SNFSError('File system not found.');
-    }
+  }
+
+  fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
+    this._fsmod_check_access();
+    const fs = this._fsfind(fsno);
     let use_name = fs._name;
     if (typeof options.name === 'undefined') {
       // Intentionally blank.
@@ -541,11 +590,15 @@ export class SessionMemory extends Session {
     return Promise.resolve(fileSystemToInfo(fs));
   }
 
-  fsdel(fsno: string): Promise<FsdelResult> {
+  _fsdel_check_access() {
     const logged_in_user = this._lookup_user();
     if (!logged_in_user.admin) {
       throw new SNFSError('Not authorized.');
     }
+  }
+
+  fsdel(fsno: string): Promise<FsdelResult> {
+    this._fsdel_check_access();
     for (const user of this._snfs._users) {
       if (user.fs) {
         if (user.fs._fsno == fsno) {
@@ -558,17 +611,15 @@ export class SessionMemory extends Session {
         }
       }
     }
-    const fs = this._snfs._fss.find(x => x._fsno == fsno);
-    if (fs == null) {
-      throw new SNFSError('File system not found.');
-    }
+    const fs = this._fsfind(fsno);
     this._snfs._fss = this._snfs._fss.filter(x => x._fsno != fsno);
     return Promise.resolve({});
   }
 
   fslist(): Promise<FslistResult[]> {
     const logged_in_user = this._lookup_user();
-    const fileSystemToFslistResult = (fs: FileSystemMemory): FslistResult => {
+    const fss = this._fssearch();
+    return Promise.resolve(fss.map((fs: FileSystemMemory) => {
       const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
       return {
         name: fs._name,
@@ -576,16 +627,7 @@ export class SessionMemory extends Session {
         limits: { ...fs._limits },
         writeable: logged_in_user.admin || perm.writeable,
       };
-    };
-    if (logged_in_user.admin) {
-      return Promise.resolve(this._snfs._fss.map(fileSystemToFslistResult));
-    } else {
-      const result = this._snfs._fss.filter((fs: FileSystemMemory) => {
-        const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
-        return perm.unionable;
-      }).map(fileSystemToFslistResult);
-      return Promise.resolve(result);
-    }
+    }));
   }
 }
 
