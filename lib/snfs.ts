@@ -24,8 +24,7 @@ export abstract class Session {
   abstract fsdel(fsno: string): Promise<FsdelResult>;
   abstract fslist(): Promise<FslistResult[]>;
 
-  // XXX: For granting a user access to a file system.
-  //abstract grant(userno: string, options: GrantOptions): Promise<GrantResult>;
+  abstract grant(userno: string, options: GrantOptions | GrantOptions[]): Promise<GrantResult>;
 }
 
 export abstract class FileSystem {
@@ -120,14 +119,13 @@ export interface FSUsage {
   bytes_used: number; // BigInt maybe?
 }
 
-// XXX: New interface.
+// Set readable and writeable to false to revoke access.
 export interface GrantOptions {
-  fs_can_write?: string[];
-  fs_can_union?: string[]; // For when you want to down-grade form writeable or just make it readable.
-  fs_revoke?: string[]; // For when you want to revoke access to a file system.
+  fsno: string;
+  readable: boolean;
+  writeable: boolean;
 }
 
-// XXX: New interface.
 export interface GrantResult {
 }
 

@@ -10,6 +10,7 @@ import {
   FileSystem,
   SNFSError,
   Session,
+  GrantOptions,
 } from '../lib/snfs';
 import { PasswordModuleHash } from './password';
 import Persist from './persist';
@@ -440,6 +441,50 @@ app.post('/:owner/:pool/fslist', lookupOwner, lookupSession, async (req, res, ne
   try {
     const session: ServerSession = res.locals.session;
     res.locals.finish(await session.session.fslist());
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.options('/:owner/:pool/grant', (req, res) => { res.end(); });
+app.post('/:owner/:pool/grant', lookupOwner, lookupSession, async (req, res, next) => {
+  try {
+    const session: ServerSession = res.locals.session;
+    const { userno, options } = req.body;
+    if (typeof userno !== 'string') {
+      throw new SNFSError('userno must be a string.');
+    }
+    function isGrantOptions(o: any) {
+      if (typeof o !== 'object') {
+        throw new SNFSError('option must be an object.');
+      }
+      if (typeof o.fsno !== 'string') {
+        throw new SNFSError('options.fsno must be a string.');
+      }
+      if (typeof o.readable !== 'boolean') {
+        throw new SNFSError('options.readable must be a boolean.');
+      }
+      if (typeof o.writeable !== 'boolean') {
+        throw new SNFSError('options.writeable must be a boolean.');
+      }
+      return {
+        fsno: o.fsno,
+        readable: o.readable,
+        writeable: o.writeable,
+      };
+    }
+    let use_options: GrantOptions | GrantOptions[] = [];
+    if (Array.isArray(options)) {
+      for (const o of options) {
+        use_options.push(isGrantOptions(o));
+      }
+    } else {
+      if (typeof options !== 'object') {
+        throw new SNFSError('options must be an object.');
+      }
+      use_options = isGrantOptions(options);
+    }
+    res.locals.finish(await session.session.grant(userno as string, use_options));
   } catch (err) {
     next(err);
   }

@@ -10,6 +10,8 @@ import {
   FslistResult,
   FsmodOptions,
   FsmodResult,
+  GrantOptions,
+  GrantResult,
   LoginOptions,
   LogoutResult,
   MoveResult,
@@ -217,6 +219,14 @@ export class SessionHttp extends Session {
 
   async fslist(): Promise<FslistResult[]> {
     const result = await apirequest(urljoin(this._owner_url, this.pool, 'fslist'), {
+    });
+    return result;
+  }
+
+  async grant(userno: string, options: GrantOptions | GrantOptions[]): Promise<GrantResult> {
+    const result = await apirequest(urljoin(this._owner_url, this.pool, 'grant'), {
+      userno,
+      options,
     });
     return result;
   }

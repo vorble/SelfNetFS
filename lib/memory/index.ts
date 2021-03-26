@@ -11,6 +11,8 @@ import {
   FslistResult,
   FsmodOptions,
   FsmodResult,
+  GrantOptions,
+  GrantResult,
   LoginOptions,
   LogoutResult,
   MoveResult,
@@ -628,6 +630,29 @@ export class SessionMemory extends Session {
         writeable: logged_in_user.admin || perm.writeable,
       };
     }));
+  }
+
+  _grant_check_access() {
+    const logged_in_user = this._lookup_user();
+    if (!logged_in_user.admin) {
+      throw new SNFSError('Not authorized.');
+    }
+  }
+
+  grant(userno: string, options: GrantOptions | GrantOptions[]): Promise<GrantResult> {
+    this._grant_check_access();
+    if (!Array.isArray(options)) {
+      options = [options];
+    }
+    for (const option of options) {
+      this._snfs._permissions.set({
+        userno,
+        fsno: option.fsno,
+        unionable: option.readable,
+        writeable: option.writeable,
+      });
+    }
+    return Promise.resolve({});
   }
 }
 
