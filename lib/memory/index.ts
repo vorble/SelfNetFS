@@ -177,8 +177,6 @@ export class Memory extends SNFS {
       password: this._password_module.hash(password),
       fs: fs,
       union: [],
-      writeable: [fs],
-      unionable: [],
     };
     this._fss.push(fs);
     this._users.push(user);
@@ -383,8 +381,6 @@ export class SessionMemory extends Session {
       password: this._snfs._password_module.hash(options.password),
       fs,
       union,
-      writeable: fs == null ? [] : [fs],
-      unionable: union,
     };
     this._snfs._users.push(user);
     return Promise.resolve(userRecordToUserInfo(user));
