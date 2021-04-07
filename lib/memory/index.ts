@@ -186,7 +186,7 @@ export class Memory extends SNFS {
       userno: user.userno,
       fsno: fs._fsno,
       writeable: true,
-      unionable: true,
+      readable: true,
     });
   }
 
@@ -282,8 +282,7 @@ export class SessionMemory extends Session {
     }
     if (!logged_in_user.admin) {
       const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
-      // TODO: Wish I had a "visible" permission.
-      if (!perm.unionable) {
+      if (!perm.readable) {
         throw new SNFSError('FS not found.');
       }
     }
@@ -298,8 +297,7 @@ export class SessionMemory extends Session {
     }
     if (!logged_in_user.admin) {
       const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
-      // TODO: Wish I had a "visible" permission.
-      if (!perm.unionable) {
+      if (!perm.readable) {
         throw new SNFSError('FS not found for union.');
       }
     }
@@ -313,7 +311,7 @@ export class SessionMemory extends Session {
         return true;
       }
       const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
-      return perm.unionable;
+      return perm.readable;
     });
   }
 
@@ -494,7 +492,7 @@ export class SessionMemory extends Session {
         userno: logged_in_user.userno,
         fsno: fs._fsno,
       });
-      if (!perm.unionable) {
+      if (!perm.readable) {
         throw new SNFSError('Not authorized.');
       }
       if (writeable && !perm.writeable) {
@@ -648,7 +646,7 @@ export class SessionMemory extends Session {
       this._snfs._permissions.set({
         userno,
         fsno: option.fsno,
-        unionable: option.readable,
+        readable: option.readable,
         writeable: option.writeable,
       });
     }

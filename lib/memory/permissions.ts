@@ -3,9 +3,9 @@ export interface PermissionRecordDescriptor {
   fsno: string;
 }
 
-// TODO: Do I want flags or some enum values since writeable should imply unionable.
+// TODO: Do I want flags or some enum values since writeable should imply readable.
 export interface PermissionRecord extends PermissionRecordDescriptor {
-  unionable: boolean; // TODO: I think I would prefer readable as the name for this field.
+  readable: boolean;
   writeable: boolean;
 }
 
@@ -21,13 +21,16 @@ export class PermissionSet {
   }
 
   set(record: PermissionRecord) {
-    const index = this._permissions.findIndex((p: PermissionRecord) => p.userno == record.userno && p.fsno == record.fsno);
-    if (index >= 0) {
-      this._permissions[index] = { ...record };
+    if (record.readable || record.writeable) {
+      const index = this._permissions.findIndex((p: PermissionRecord) => p.userno == record.userno && p.fsno == record.fsno);
+      if (index >= 0) {
+        this._permissions[index] = { ...record };
+      } else {
+        this._permissions.push({ ...record });
+      }
     } else {
-      this._permissions.push({ ...record });
+      this._permissions = this._permissions.filter((p: PermissionRecord) => p.userno != record.userno || p.fsno != record.fsno);
     }
-    // XXX: Should delete from the permissions list when all permissions are false.
   }
 
   get(desc: PermissionRecordDescriptor): PermissionRecord {
@@ -37,7 +40,7 @@ export class PermissionSet {
     }
     return {
       ...desc,
-      unionable: false,
+      readable: false,
       writeable: false,
     };
   }
