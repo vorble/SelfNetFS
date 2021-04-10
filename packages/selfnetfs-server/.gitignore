@@ -1,0 +1,5 @@
+/database
+/dist
+/node_modules
+*.d.ts
+/sestoken.pem

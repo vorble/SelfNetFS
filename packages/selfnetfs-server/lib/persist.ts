@@ -4,11 +4,11 @@ import path = require('path');
 import {
   FSLimits,
   SNFSError,
-} from '../lib/snfs';
+} from 'selfnetfs-common';
 import {
   FileSystemMemory,
   Memory,
-} from '../lib/memory';
+} from 'selfnetfs-memory';
 
 export default class Persist {
   _database_dir: string;

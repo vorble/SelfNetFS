@@ -1,0 +1,21 @@
+{
+  "name": "selfnetfs-web-shell",
+  "version": "1.0.2",
+  "description": "selfnetfs-web-shell",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "ts-node --project tsconfig.server.json server/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Keith <vorble@cochleoid.com>",
+  "repository": "https://github.com/vorble/selfnetfs",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "selfnetfs": "1.0.2"
+  }
+}

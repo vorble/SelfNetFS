@@ -32,11 +32,16 @@ import {
   UsermodOptions,
   WritefileOptions,
   WritefileResult,
-} from '../snfs';
+} from 'selfnetfs-common';
 import {
   PasswordModule,
   PasswordModuleNull,
-} from '../password';
+} from './password';
+// TODO: Restructure for better exports of these sort of things?
+export {
+  PasswordModule,
+  PasswordModuleNull,
+} from './password';
 import {
   PermissionSet
 } from './permissions';

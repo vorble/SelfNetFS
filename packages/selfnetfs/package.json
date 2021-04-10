@@ -1,0 +1,21 @@
+{
+  "name": "selfnetfs",
+  "version": "1.0.2",
+  "description": "selfnetfs",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": ""
+  },
+  "author": "Keith <vorble@cochleoid.com>",
+  "repository": "https://github.com/vorble/selfnetfs",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "selfnetfs-common": "1.0.2"
+  }
+}

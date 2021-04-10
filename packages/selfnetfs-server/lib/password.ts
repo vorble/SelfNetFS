@@ -1,5 +1,5 @@
 import crypto = require('crypto');
-import { PasswordModule } from '../lib/password';
+import { PasswordModule } from 'selfnetfs-memory';
 
 const NULL_SHA512_SALT = Buffer.alloc(16);
 

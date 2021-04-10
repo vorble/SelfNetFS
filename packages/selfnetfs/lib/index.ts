@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   FSLimits,
   FileSystem,
@@ -30,7 +31,7 @@ import {
   UsermodOptions,
   WritefileOptions,
   WritefileResult,
-} from '../lib/snfs';
+} from 'selfnetfs-common';
 import {
   base64ToBuffer,
   bufferToBase64,
@@ -56,21 +57,28 @@ async function apirequest(endpoint: string, payload: any) {
   } else {
     throw new SNFSError('Invalid payload.');
   }
-  const response = await fetch(endpoint, init);
-  const blob = await response.blob();
-  if (blob.type !== 'application/json' && blob.type !== 'application/json; charset=utf-8') {
-    console.error(response);
-    throw new SNFSError('Response has unexepcted type.');
-  }
-  const text = await blob.text();
-  const obj = JSON.parse(text);
-  if (!response.ok) {
-    if (typeof obj.message !== 'string') {
-      throw new SNFSError('Failure.');
+  try {
+    const response = await axios({
+      url: endpoint,
+      method: 'POST',
+      data: JSON.stringify(payload),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      withCredentials: true,
+    });
+    // TODO: Might want to check some things about response.data.
+    return response.data;
+  } catch (err) {
+    if (err.isAxiosError) {
+      if (err.response && typeof err.response.data === 'object' && err.response.data !== null && typeof err.response.data.message === 'string' && err.response.data.message) {
+        throw new SNFSError(err.response.data.message);
+      }
+      throw new SNFSError('Failure');
     }
-    throw new SNFSError(obj.message);
+    throw err;
   }
-  return obj;
 }
 
 export class Http extends SNFS {

@@ -2,11 +2,11 @@ import {
   SNFS,
   SNFSError,
   Session,
-} from '../lib/snfs';
+} from 'selfnetfs-common';
 import {
   Memory,
   SessionMemory,
-} from '../lib/memory';
+} from 'selfnetfs-memory';
 import crypto = require('crypto');
 import jwt = require('jsonwebtoken');
 import fs = require('fs');
