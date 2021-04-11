@@ -75,7 +75,7 @@ async function apirequest(endpoint: string, payload: any) {
       if (err.response && typeof err.response.data === 'object' && err.response.data !== null && typeof err.response.data.message === 'string' && err.response.data.message) {
         throw new SNFSError(err.response.data.message);
       }
-      throw new SNFSError('Failure');
+      throw new SNFSError(err.message);
     }
     throw err;
   }
