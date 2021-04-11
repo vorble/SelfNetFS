@@ -19,6 +19,7 @@ interface ServerOptions {
   port: number;
 }
 
+import * as net from 'net';
 export class Server {
   private port: number;
   private persist: Persist;
@@ -26,6 +27,7 @@ export class Server {
   private owners: Map<string, Memory>
   private null_owner: Memory;
   private app: express.Application;
+  private server: null | net.Server;
 
   constructor(options: ServerOptions) {
     this.port = options.port;
@@ -565,18 +567,7 @@ export class Server {
       return res.status(500).send({ message: 'Internal server error.' });
     });
 
-    const server = this.app.listen(4000, () => {
-      const address = server.address();
-      if (address == null) {
-        console.log('Listening');
-      } else if (typeof address === 'string') {
-        console.log('Listening on http://' + address);
-      } else {
-        const host = address.address;
-        const port = address.port;
-        console.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
-      }
-    });
+    this.server = null;
   }
 
   lookupOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -621,6 +612,26 @@ export class Server {
   }
 
   listen() {
+    const server = this.app.listen(4000, () => {
+      this.server = server;
+      const address = server.address();
+      if (address == null) {
+        console.log('Listening');
+      } else if (typeof address === 'string') {
+        console.log('Listening on http://' + address);
+      } else {
+        const host = address.address;
+        const port = address.port;
+        console.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+      }
+    });
+  }
+
+  destroy() {
+    if (this.server != null) {
+      this.server.close();
+      this.server = null;
+    };
   }
 }
 
