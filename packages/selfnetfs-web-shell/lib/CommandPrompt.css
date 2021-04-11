@@ -1,0 +1,20 @@
+div.command-prompt {
+    display: flex;
+    /* TODO: I don't like that I have this font family definition in several
+             places. Find a way to unify the fonts. */
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+      monospace;
+}
+
+div.command-prompt span {
+    white-space: pre;
+}
+
+div.command-prompt input {
+    border: 0px;
+    /* TODO: I don't like that I have this font family definition in several
+             places. Find a way to unify the fonts. */
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+      monospace;
+    font-size: 100%;
+}
