@@ -1,40 +1,45 @@
+import * as net from 'net';
 import bodyParser = require('body-parser');
 import cookieParser = require('cookie-parser');
 import express = require('express');
-import uuid = require('uuid');
-import {
-  Memory,
-} from 'selfnetfs-memory';
 import {
   FileSystem,
+  SNFS,
   SNFSError,
   Session,
   GrantOptions,
 } from 'selfnetfs-common';
+import {
+  Memory,
+} from 'selfnetfs-memory';
 import { PasswordModuleHash } from './password';
+// TODO: Maybe the persist logic should be part of the memory
+// implementation or be a plugin for the memory implementation.
 import Persist from './persist';
 import { ServerSessionManager, ServerSession } from './session';
 
 interface ServerOptions {
   port: number;
+  ownerFactory: () => SNFS;
 }
 
-import * as net from 'net';
 export class Server {
   private port: number;
+  private ownerFactory: () => SNFS;
   private persist: Persist;
   private sessions: ServerSessionManager;
-  private owners: Map<string, Memory>
-  private null_owner: Memory;
+  private owners: Map<string, SNFS>
+  private null_owner: SNFS;
   private app: express.Application;
   private server: null | net.Server;
 
   constructor(options: ServerOptions) {
     this.port = options.port;
+    this.ownerFactory = options.ownerFactory;
     this.persist = new Persist('./database'); // Matches what's in the cli.
     this.sessions = new ServerSessionManager();
-    this.owners = new Map<string, Memory>();
-    this.null_owner = new Memory(uuid.v4, new PasswordModuleHash());
+    this.owners = new Map<string, SNFS>();
+    this.null_owner = this.ownerFactory();
 
     this.app = express();
 
@@ -572,9 +577,9 @@ export class Server {
 
   lookupOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
     const { owner } = req.params;
-    let snfs: Memory | undefined | null = this.owners.get(owner);
+    let snfs: SNFS | undefined | null = this.owners.get(owner);
     if (snfs == null) {
-      snfs = this.persist.load(owner, () => new Memory(uuid.v4, new PasswordModuleHash())); // Matches what's in the cli.
+      snfs = this.persist.load(owner, () => this.ownerFactory() as Memory); // TODO: Shouldn't type cast. Will break if another persistance layer is used.
       if (snfs != null) {
         this.owners.set(owner, snfs);
       }

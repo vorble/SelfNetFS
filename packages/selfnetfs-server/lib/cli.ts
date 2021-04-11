@@ -38,4 +38,9 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
   process.exit(0);
 }
 
-new Server({ port: 4000 }).listen();
+new Server({
+  port: 4000,
+  ownerFactory: () => {
+    return new Memory(uuid.v4, new PasswordModuleHash());
+  },
+}).listen();
