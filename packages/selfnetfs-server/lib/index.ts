@@ -611,8 +611,10 @@ export class Server {
     }
   }
 
+  // TODO: Should make this async and allow it to return after listening is started.
+  // When it's async, update tests.
   listen() {
-    const server = this.app.listen(4000, () => {
+    const server = this.app.listen(this.port, () => {
       this.server = server;
       const address = server.address();
       if (address == null) {
