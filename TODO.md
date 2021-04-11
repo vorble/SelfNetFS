@@ -19,3 +19,8 @@
 * [ ] Write basic test that starts a server and runs some requests against it.
 * [ ] Revise naming all through the project.
 * [ ] Add appropriate typescript dependencies per package in project.
+
+---
+
+Idea for restructuring: turn `OnwerPool` into the persist layer. The pluggable persist
+layer will produce generic `SNFS` objects for use by the `Server` class.

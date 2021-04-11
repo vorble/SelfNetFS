@@ -7,6 +7,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsc",
     "test": "mocha -r ts-node/register test/**/*.ts"
   },
   "author": "Keith <vorble@cochleoid.com>",

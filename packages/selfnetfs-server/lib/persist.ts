@@ -10,7 +10,7 @@ import {
   Memory,
 } from 'selfnetfs-memory';
 
-export default class Persist {
+export class Persist {
   _database_dir: string;
 
   constructor(database_dir: string) {
@@ -192,3 +192,5 @@ function loadUserRecord(user: any, snfs: Memory): UserRecord {
     union: user.union.map(lookupFS),
   };
 }
+
+export default Persist;

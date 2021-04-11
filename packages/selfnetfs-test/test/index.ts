@@ -3,13 +3,14 @@ import * as uuid from 'uuid';
 import { equal } from 'assert';
 import { Http } from 'selfnetfs';
 import { Memory, PasswordModuleNull } from 'selfnetfs-memory';
-import { Server } from 'selfnetfs-server';
+import { Server, Persist, OwnerPool } from 'selfnetfs-server';
 
+const persist = new Persist('./database');
 const server = new Server({
   port: 4001,
-  ownerFactory: () => {
+  owners: new OwnerPool<Memory>(persist, () => {
     return new Memory(uuid.v4, new PasswordModuleNull());
-  },
+  }),
 });
 
 function abit() {

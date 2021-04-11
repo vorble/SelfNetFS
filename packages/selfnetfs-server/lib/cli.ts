@@ -2,15 +2,15 @@ import * as uuid from 'uuid';
 import { Server } from './index';
 import Persist from './persist';
 import { PasswordModuleHash } from './password';
+import OwnerPool from './owner';
 import {
   Memory,
 } from 'selfnetfs-memory';
 
-
 // TODO: The persist and other functional components that are replicated separately here and in
 // the Server class should be consolidated somehow.
 
-const persist = new Persist('./database'); // matches what's in the Server class.
+const persist = new Persist('./database');
 
 if (process.argv.slice(2).indexOf('--init') >= 0) {
   const argv = process.argv.slice(2);
@@ -38,9 +38,11 @@ if (process.argv.slice(2).indexOf('--init') >= 0) {
   process.exit(0);
 }
 
+function ownerFactory(): Memory {
+  return new Memory(uuid.v4, new PasswordModuleHash());
+}
+
 new Server({
   port: 4000,
-  ownerFactory: () => {
-    return new Memory(uuid.v4, new PasswordModuleHash());
-  },
+  owners: new OwnerPool<Memory>(persist, ownerFactory),
 }).listen();

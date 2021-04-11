@@ -9,39 +9,34 @@ import {
   Session,
   GrantOptions,
 } from 'selfnetfs-common';
+import { OwnerPool } from './owner';
+export { OwnerPool } from './owner';
 import {
   Memory,
 } from 'selfnetfs-memory';
 import { PasswordModuleHash } from './password';
-// TODO: Maybe the persist logic should be part of the memory
-// implementation or be a plugin for the memory implementation.
-import Persist from './persist';
 import { ServerSessionManager, ServerSession } from './session';
 
-interface ServerOptions {
+export { Persist } from './persist'; // TODO: provisionally exported
+
+interface ServerOptions<T extends SNFS> {
   port: number;
-  ownerFactory: () => SNFS;
+  owners: OwnerPool<T>;
 }
 
 export class Server {
   private port: number;
-  private ownerFactory: () => SNFS;
-  private persist: Persist;
   private sessions: ServerSessionManager;
-  private owners: Map<string, SNFS>
-  private null_owner: SNFS;
+  private owners: OwnerPool<SNFS>;
   private app: express.Application;
   private server: null | net.Server;
 
-  constructor(options: ServerOptions) {
+  constructor(options: ServerOptions<SNFS>) {
     this.port = options.port;
-    this.ownerFactory = options.ownerFactory;
-    this.persist = new Persist('./database'); // Matches what's in the cli.
     this.sessions = new ServerSessionManager();
-    this.owners = new Map<string, SNFS>();
-    this.null_owner = this.ownerFactory();
-
+    this.owners = options.owners;
     this.app = express();
+    this.server = null;
 
     this.app.use(cookieParser());
 
@@ -66,7 +61,7 @@ export class Server {
           return res.status(400).send({ message: 'Invalid request: missing request body.' });
         }
         res.locals.finish = (response: any) => {
-          this.persist.save(req.params.owner, res.locals.snfs);
+          this.owners.save(req.params.owner, res.locals.snfs);
           return res.status(200).send(response == null ? {} : response);
         };
       }
@@ -571,23 +566,11 @@ export class Server {
       console.error(err);
       return res.status(500).send({ message: 'Internal server error.' });
     });
-
-    this.server = null;
   }
 
   lookupOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
     const { owner } = req.params;
-    let snfs: SNFS | undefined | null = this.owners.get(owner);
-    if (snfs == null) {
-      snfs = this.persist.load(owner, () => this.ownerFactory() as Memory); // TODO: Shouldn't type cast. Will break if another persistance layer is used.
-      if (snfs != null) {
-        this.owners.set(owner, snfs);
-      }
-    }
-    if (snfs == null) {
-      snfs = this.null_owner;
-    }
-    res.locals.snfs = snfs;
+    res.locals.snfs = this.owners.lookup(owner);
     next();
   }
 
@@ -638,7 +621,7 @@ export class Server {
     if (this.server != null) {
       this.server.close();
       this.server = null;
-    };
+    }
   }
 }
 
