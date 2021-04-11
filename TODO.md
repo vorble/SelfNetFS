@@ -11,9 +11,11 @@
 
 ## Monorepo Refactoring
 
-* [ ] Look at `package.json` `repository` field and see if you can give it a directory within the repository.
-* [ ] Figure out if I want to generate map files in the tsconfig for each project. (I lean toward Yes)
 * [ ] Deep review each package.json file for consistency.
+* [ ] Deep review each tsconfig.json file for consistency.
+* [ ] Deep review each gitignore file for consistency.
+* [ ] Deep review each npmignore file for consistency.
 * [ ] Figure out how lerna manages propagating package version numbers through the project. Does it even?
 * [ ] Write basic test that starts a server and runs some requests against it.
 * [ ] Revise naming all through the project.
+* [ ] Add appropriate typescript dependencies per package in project.
