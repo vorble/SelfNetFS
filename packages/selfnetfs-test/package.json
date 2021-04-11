@@ -6,11 +6,8 @@
   "files": [
     "dist"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "test": ""
+    "test": "mocha -r ts-node/register test/**/*.ts"
   },
   "author": "Keith <vorble@cochleoid.com>",
   "repository": {
@@ -19,9 +16,14 @@
     "directory": "packages/selfnetfs-test"
   },
   "license": "MIT",
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "@types/mocha": "^8.2.2",
+    "mocha": "^8.3.2",
     "selfnetfs": "1.0.2",
     "selfnetfs-memory": "1.0.2",
-    "selfnetfs-server": "1.0.2"
+    "selfnetfs-server": "1.0.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4"
   }
 }
