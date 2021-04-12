@@ -16,11 +16,9 @@
 * [ ] Deep review each gitignore file for consistency.
 * [ ] Deep review each npmignore file for consistency.
 * [ ] Figure out how lerna manages propagating package version numbers through the project. Does it even?
-* [ ] Write basic test that starts a server and runs some requests against it.
+* [x] Write basic test that starts a server and runs some requests against it.
+* [ ] Write test infrastructure that can perform a full set of tests on any given SNFS implementation.
+* [ ] Revise dependencies in server, correctly put things in the dev and non-dev dependencies sections.
 * [ ] Revise naming all through the project.
 * [ ] Add appropriate typescript dependencies per package in project.
-
----
-
-Idea for restructuring: turn `OnwerPool` into the persist layer. The pluggable persist
-layer will produce generic `SNFS` objects for use by the `Server` class.
+* [ ] Rename all snake case to Java style camel case.
