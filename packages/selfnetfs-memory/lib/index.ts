@@ -197,7 +197,7 @@ export class Memory extends SNFS {
     return this._users.find(u => u.userno == userno) || null;
   }
 
-  login(options: LoginOptions): Promise<Session> {
+  _login(options: LoginOptions): SessionMemory {
     let reject = false;
     let user = null;
     for (let i = 0; i < this._users.length; ++i) {
@@ -213,11 +213,14 @@ export class Memory extends SNFS {
     if (!match || reject) {
       throw new SNFSError('Authentication failed.');
     }
-    const session = new SessionMemory(this, user);
-    return Promise.resolve(session);
+    return new SessionMemory(this, user);
   }
 
-  _resume(session_token: string): Session {
+  login(options: LoginOptions): Promise<Session> {
+    return Promise.resolve(this._login(options));
+  }
+
+  _resume(session_token: string): SessionMemory {
     const user = this._users.find(u => u.userno == session_token);
     if (user == null) {
       throw new SNFSError('User not found.');
@@ -328,12 +331,16 @@ export class SessionMemory extends Session {
     };
   }
 
-  detail(): Promise<SessionDetail> {
+  _detail(): SessionDetail {
     const user = this._lookup_user();
-    return Promise.resolve({
+    return {
       session_token: this._session_token,
       user: userRecordToUserInfo(user),
-    });
+    };
+  }
+
+  detail(): Promise<SessionDetail> {
+    return Promise.resolve(this._detail());
   }
 
   logout(): Promise<LogoutResult> {
@@ -349,7 +356,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  useradd(options: UseraddOptions): Promise<UserInfo> {
+  _useradd(options: UseraddOptions): UserInfo {
     this._useradd_check_access();
     if (this._snfs._users.find(u => u.name == options.name)) {
       throw new SNFSError('User already exists.');
@@ -388,7 +395,11 @@ export class SessionMemory extends Session {
       union,
     };
     this._snfs._users.push(user);
-    return Promise.resolve(userRecordToUserInfo(user));
+    return userRecordToUserInfo(user);
+  }
+
+  useradd(options: UseraddOptions): Promise<UserInfo> {
+    return Promise.resolve(this._useradd(options));
   }
 
   _usermod_check_access() {
@@ -398,7 +409,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
+  _usermod(userno: string, options: UsermodOptions): UserInfo {
     this._usermod_check_access();
     const user = this._userfind(userno);
     const new_user = { ...user };
@@ -439,7 +450,11 @@ export class SessionMemory extends Session {
     }
     this._snfs._users = this._snfs._users.filter(u => u.userno != userno);
     this._snfs._users.push(new_user);
-    return Promise.resolve(userRecordToUserInfo(new_user));
+    return userRecordToUserInfo(new_user);
+  }
+
+  usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
+    return Promise.resolve(this._usermod(userno, options));
   }
 
   _userdel_check_access() {
@@ -449,7 +464,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  userdel(userno: string): Promise<UserdelResult> {
+  _userdel(userno: string): UserdelResult {
     this._userdel_check_access();
     const logged_in_user = this._lookup_user();
     if (logged_in_user.userno == userno) {
@@ -457,21 +472,33 @@ export class SessionMemory extends Session {
     }
     const user = this._userfind(userno);
     this._snfs._users = this._snfs._users.filter(u => u.userno != userno);
-    return Promise.resolve({});
+    return {};
+  }
+
+  userdel(userno: string): Promise<UserdelResult> {
+    return Promise.resolve(this._userdel(userno));
+  }
+
+  _userlist(): UserInfo[] {
+    return this._usersearch().map(userRecordToUserInfo);
   }
 
   userlist(): Promise<UserInfo[]> {
-    return Promise.resolve(this._usersearch().map(userRecordToUserInfo));
+    return Promise.resolve(this._userlist());
   }
 
-  fs(): Promise<FileSystem> {
+  _fs(): FileSystemMemory {
     const logged_in_user = this._lookup_user();
     const fs = logged_in_user.fs;
     if (fs == null) {
       throw new SNFSError('User has no FS.');
     }
     const writeable = true; // File system is writeable by virtue of being assigned to the user.
-    return Promise.resolve(new FileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs));
+    return new FileSystemMemoryUnion(fs, logged_in_user.union, writeable, this._snfs._uuidgen, logged_in_user, this._snfs);
+  }
+
+  fs(): Promise<FileSystem> {
+    return Promise.resolve(this._fs());
   }
 
   _fsget_defaults(o?: FsgetOptions): FsgetOptionsFull {
@@ -502,7 +529,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  fsget(fsno: string, o?: FsgetOptions): Promise<FileSystem> {
+  _fsget(fsno: string, o?: FsgetOptions): FileSystemMemory {
     const options = this._fsget_defaults(o);
     const fs = this._fsfind(fsno);
     this._fsget_check_access(fs, options.writeable);
@@ -516,11 +543,15 @@ export class SessionMemory extends Session {
     // TODO: Since this._snfs is passed to FileSystemMemoryUnion
     // constructor, I don't need to also pass the uuidgen
     // function.
-    return Promise.resolve(new FileSystemMemoryUnion(fs, union, options.writeable,
-      this._snfs._uuidgen, this._lookup_user(), this._snfs));
+    return new FileSystemMemoryUnion(fs, union, options.writeable,
+      this._snfs._uuidgen, this._lookup_user(), this._snfs);
   }
 
-  fsresume(fs_token: string): Promise<FileSystem> {
+  fsget(fsno: string, o?: FsgetOptions): Promise<FileSystem> {
+    return Promise.resolve(this._fsget(fsno, o));
+  }
+
+  _fsresume(fs_token: string): FileSystemMemory {
     let tok = null;
     try {
       tok = JSON.parse(fs_token);
@@ -545,7 +576,11 @@ export class SessionMemory extends Session {
     if (typeof writeable !== 'boolean') {
       throw new SNFSError('Invalid token.');
     }
-    return this.fsget(fsno, { union, writeable });
+    return this._fsget(fsno, { union, writeable });
+  }
+
+  fsresume(fs_token: string): Promise<FileSystem> {
+    return Promise.resolve(this._fsresume(fs_token));
   }
 
   _fsadd_check_access() {
@@ -555,7 +590,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  fsadd(options: FsaddOptions): Promise<FsmodResult> {
+  _fsadd(options: FsaddOptions): FsmodResult {
     this._fsadd_check_access();
     if (!options.name) {
       throw new SNFSError('Option `name` may not be blank.');
@@ -564,7 +599,11 @@ export class SessionMemory extends Session {
     let fsno = this._snfs._uuidgen_unique_fsno();
     const fs = new FileSystemMemory(options.name, fsno, limits, this._snfs._uuidgen);
     this._snfs._fss.push(fs);
-    return Promise.resolve(fileSystemToInfo(fs));
+    return fileSystemToInfo(fs);
+  }
+
+  fsadd(options: FsaddOptions): Promise<FsmodResult> {
+    return Promise.resolve(this._fsadd(options));
   }
 
   _fsmod_check_access() {
@@ -574,7 +613,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
+  _fsmod(fsno: string, options: FsmodOptions): FsmodResult {
     this._fsmod_check_access();
     const fs = this._fsfind(fsno);
     let use_name = fs._name;
@@ -588,7 +627,11 @@ export class SessionMemory extends Session {
     const limits = fileSystemOptionsToLimits(options, fs._limits);
     fs._limits = limits;
     fs._name = use_name;
-    return Promise.resolve(fileSystemToInfo(fs));
+    return fileSystemToInfo(fs);
+  }
+
+  fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
+    return Promise.resolve(this._fsmod(fsno, options));
   }
 
   _fsdel_check_access() {
@@ -598,7 +641,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  fsdel(fsno: string): Promise<FsdelResult> {
+  _fsdel(fsno: string): FsdelResult {
     this._fsdel_check_access();
     for (const user of this._snfs._users) {
       if (user.fs) {
@@ -614,13 +657,17 @@ export class SessionMemory extends Session {
     }
     const fs = this._fsfind(fsno);
     this._snfs._fss = this._snfs._fss.filter(x => x._fsno != fsno);
-    return Promise.resolve({});
+    return {};
   }
 
-  fslist(): Promise<FslistResult[]> {
+  fsdel(fsno: string): Promise<FsdelResult> {
+    return Promise.resolve(this._fsdel(fsno));
+  }
+
+  _fslist(): FslistResult[] {
     const logged_in_user = this._lookup_user();
     const fss = this._fssearch();
-    return Promise.resolve(fss.map((fs: FileSystemMemory) => {
+    return fss.map((fs: FileSystemMemory) => {
       const perm = this._snfs._permissions.get({ userno: logged_in_user.userno, fsno: fs._fsno });
       return {
         name: fs._name,
@@ -628,7 +675,11 @@ export class SessionMemory extends Session {
         limits: { ...fs._limits },
         writeable: logged_in_user.admin || perm.writeable,
       };
-    }));
+    });
+  }
+
+  fslist(): Promise<FslistResult[]> {
+    return Promise.resolve(this._fslist());
   }
 
   _grant_check_access() {
@@ -638,7 +689,7 @@ export class SessionMemory extends Session {
     }
   }
 
-  grant(userno: string, options: GrantOptions | GrantOptions[]): Promise<GrantResult> {
+  _grant(userno: string, options: GrantOptions | GrantOptions[]): GrantResult {
     this._grant_check_access();
     if (!Array.isArray(options)) {
       options = [options];
@@ -651,7 +702,11 @@ export class SessionMemory extends Session {
         writeable: option.writeable,
       });
     }
-    return Promise.resolve({});
+    return {};
+  }
+
+  grant(userno: string, options: GrantOptions | GrantOptions[]): Promise<GrantResult> {
+    return Promise.resolve(this._grant(userno, options));
   }
 }
 
@@ -724,12 +779,16 @@ export class FileSystemMemory extends FileSystem {
     };
   }
 
-  detail(): Promise<FileSystemDetail> {
-    return Promise.resolve({
+  _detail(): FileSystemDetail {
+    return {
       fs_token: JSON.stringify({ fsno: this._fsno, union: [], writeable: true }),
       fs: fileSystemToDetail(this),
       union: [],
-    });
+    };
+  }
+
+  detail(): Promise<FileSystemDetail> {
+    return Promise.resolve(this._detail());
   }
 
   _readdir(path: string): ReaddirResult[] {
@@ -965,15 +1024,19 @@ class FileSystemMemoryUnion extends FileSystemMemory {
     };
   }
 
-  detail(): Promise<FileSystemDetail> {
-    return Promise.resolve({
+  _detail(): FileSystemDetail {
+    return {
       fs_token: JSON.stringify({ fsno: this._fsno, union: this._union.map(ufs => ufs._fsno), writeable: this._writeable }),
       fs: fileSystemToDetail(this._fs),
       union: this._union.map(fileSystemToDetail),
-    });
+    };
   }
 
-  readdir(path: string): Promise<ReaddirResult[]> {
+  detail(): Promise<FileSystemDetail> {
+    return Promise.resolve(this._detail());
+  }
+
+  _readdir(path: string): ReaddirResult[] {
     this._check_access();
     const result = this._fs._readdir(path);
     if (!this._writeable) {
@@ -998,10 +1061,14 @@ class FileSystemMemoryUnion extends FileSystemMemory {
         return a.kind < b.kind ? -1 : 1;
       return 0;
     });
-    return Promise.resolve(result);
+    return result;
   }
 
-  stat(path: string): Promise<StatResult> {
+  readdir(path: string): Promise<ReaddirResult[]> {
+    return Promise.resolve(this._readdir(path));
+  }
+
+  _stat(path: string): StatResult {
     this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {
@@ -1010,7 +1077,7 @@ class FileSystemMemoryUnion extends FileSystemMemory {
         if (errors.length > 0 || !this._writeable) {
           result.writeable = false;
         }
-        return Promise.resolve(result);
+        return result;
       } catch(err) {
         if (err instanceof SNFSError) {
           errors.push(err);
@@ -1022,20 +1089,28 @@ class FileSystemMemoryUnion extends FileSystemMemory {
     throw errors[0];
   }
 
-  writefile(path: string, data: Uint8Array, options: WritefileOptions): Promise<WritefileResult> {
+  stat(path: string): Promise<StatResult> {
+    return Promise.resolve(this._stat(path));
+  }
+
+  _writefile(path: string, data: Uint8Array, options: WritefileOptions): WritefileResult {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
-    return Promise.resolve(this._fs._writefile(path, data, options));
+    return this._fs._writefile(path, data, options);
   }
 
-  readfile(path: string): Promise<ReadfileResult> {
+  writefile(path: string, data: Uint8Array, options: WritefileOptions): Promise<WritefileResult> {
+    return Promise.resolve(this._writefile(path, data, options));
+  }
+
+  _readfile(path: string): ReadfileResult {
     this._check_access();
     const errors = [];
     for (const fs of [this._fs, ...this._union]) {
       try {
-        return Promise.resolve(fs._readfile(path));
+        return fs._readfile(path);
       } catch(err) {
         if (err instanceof SNFSError) {
           errors.push(err);
@@ -1047,7 +1122,11 @@ class FileSystemMemoryUnion extends FileSystemMemory {
     throw errors[0]; // Maybe this isn't a great idea? It'll have the original stack trace.
   }
 
-  unlink(path: string): Promise<UnlinkResult> {
+  readfile(path: string): Promise<ReadfileResult> {
+    return Promise.resolve(this._readfile(path));
+  }
+
+  _unlink(path: string): UnlinkResult {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
@@ -1056,7 +1135,7 @@ class FileSystemMemoryUnion extends FileSystemMemory {
     // have the file. Otherwise we'll throw a permission denied.
     let error = null;
     try {
-      return Promise.resolve(this._fs._unlink(path));
+      return this._fs._unlink(path);
     } catch (err) {
       if (err instanceof SNFSError) {
         error = err;
@@ -1083,14 +1162,18 @@ class FileSystemMemoryUnion extends FileSystemMemory {
     throw error;
   }
 
-  move(path: string, newpath: string): Promise<MoveResult> {
+  unlink(path: string): Promise<UnlinkResult> {
+    return Promise.resolve(this._unlink(path));
+  }
+
+  _move(path: string, newpath: string): MoveResult {
     this._check_access();
     if (!this._writeable) {
       throw new SNFSError('Permission denied.');
     }
     let error = null;
     try {
-      return Promise.resolve(this._fs._move(path, newpath));
+      return this._fs._move(path, newpath);
     } catch (err) {
       if (err instanceof SNFSError) {
         error = err;
@@ -1115,6 +1198,10 @@ class FileSystemMemoryUnion extends FileSystemMemory {
       }
     }
     throw error;
+  }
+
+  move(path: string, newpath: string): Promise<MoveResult> {
+    return Promise.resolve(this._move(path, newpath));
   }
 }
 
