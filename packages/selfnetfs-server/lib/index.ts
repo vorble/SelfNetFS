@@ -14,18 +14,21 @@ import {
 } from 'selfnetfs-memory';
 import { PasswordModuleHash } from './password';
 import { ServerSessionManager, ServerSession } from './session';
+import { Logger } from './log';
 import { PersistBase } from './persist';
 export { PersistMemory, PersistMemoryDump } from './persist';
 
 interface ServerOptions<T extends SNFS> {
   port: number;
   persist: PersistBase;
+  logger: Logger;
 }
 
 export class Server {
   private port: number;
   private sessions: ServerSessionManager;
   private persist: PersistBase;
+  private logger: Logger;
   private app: express.Application;
   private server: null | net.Server;
 
@@ -33,6 +36,7 @@ export class Server {
     this.port = options.port;
     this.sessions = new ServerSessionManager();
     this.persist = options.persist;
+    this.logger = options.logger;
     this.app = express();
     this.server = null;
 
@@ -561,7 +565,7 @@ export class Server {
       if (err instanceof SNFSError) {
         return res.status(400).send({ message: err.message });
       }
-      console.error(err);
+      this.logger.error(err);
       return res.status(500).send({ message: 'Internal server error.' });
     });
   }
@@ -605,13 +609,13 @@ export class Server {
           try {
             const address = server.address();
             if (address == null) {
-              console.log('Listening');
+              this.logger.log('Listening');
             } else if (typeof address === 'string') {
-              console.log('Listening on http://' + address);
+              this.logger.log('Listening on http://' + address);
             } else {
               const host = address.address;
               const port = address.port;
-              console.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+              this.logger.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
             }
           } finally {
             resolve();

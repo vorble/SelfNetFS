@@ -16,6 +16,7 @@ function loadSessionTokenPrivateKey() {
     return fs.readFileSync('./sestoken.pem');
   } catch (err) {
     if (err.code == 'ENOENT') {
+      // TODO: Hook up to the logger from the server instead of logging to console.
       console.log('Session Token Private Key: Fallback to randomly generated value.');
       const { privateKey } = crypto.generateKeyPairSync('ec', {
         namedCurve: 'secp256k1',

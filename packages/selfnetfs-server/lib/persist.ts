@@ -46,6 +46,9 @@ import {
   PasswordModuleHash,
 } from './password';
 import cloneDeep = require('lodash.clonedeep');
+import {
+  Logger,
+} from './log';
 
 // The base class for every persistance layer. A persistance layer is used by
 // the server to handle the requests from the client.
@@ -86,6 +89,7 @@ export class PersistMemory extends PersistBase {
 
 interface PersistMemoryDumpOptions {
   dataDirectory: string;
+  logger: Logger;
 }
 
 // A persistance layer which is backed by the in-memory implementation and
@@ -160,7 +164,7 @@ export class PersistMemoryDumpSNFS extends SNFS {
       fs.writeFileSync(path.join(this.options.dataDirectory, this.owner + '.json'), content);
     } catch (err) {
       if (err.code == 'ENOENT') {
-        console.log(`Could not persist database. Did you create the directory ${ this.options.dataDirectory }?`);
+        this.options.logger.log(`Could not persist database. Did you create the directory ${ this.options.dataDirectory }?`);
       }
       throw err;
     }
@@ -174,7 +178,7 @@ export class PersistMemoryDumpSNFS extends SNFS {
     } catch (err) {
       // File not found errors are expected.
       if (err.code != 'ENOENT') {
-        console.error(err);
+        this.options.logger.error(err);
       }
       return false;
     }
