@@ -597,20 +597,28 @@ export class Server {
     }
   }
 
-  // TODO: Should make this async and allow it to return after listening is started.
-  // When it's async, update tests.
-  listen() {
-    const server = this.app.listen(this.port, () => {
-      this.server = server;
-      const address = server.address();
-      if (address == null) {
-        console.log('Listening');
-      } else if (typeof address === 'string') {
-        console.log('Listening on http://' + address);
-      } else {
-        const host = address.address;
-        const port = address.port;
-        console.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+  listen(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const server = this.app.listen(this.port, () => {
+          this.server = server;
+          try {
+            const address = server.address();
+            if (address == null) {
+              console.log('Listening');
+            } else if (typeof address === 'string') {
+              console.log('Listening on http://' + address);
+            } else {
+              const host = address.address;
+              const port = address.port;
+              console.log('Listening on http://%s:%s', host.indexOf(':') >= 0 ? '[' + host + ']' : host, port);
+            }
+          } finally {
+            resolve();
+          }
+        });
+      } catch (err) {
+        reject(err);
       }
     });
   }
