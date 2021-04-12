@@ -1,52 +1,350 @@
 import fs = require('fs');
 import path = require('path');
+import * as uuid from 'uuid';
 
 import {
+  FSDetail,
   FSLimits,
+  FileSystem,
+  FileSystemDetail,
+  FileSystemInfo,
+  FsaddOptions,
+  FsaddResult,
+  FsdelResult,
+  FsgetOptions,
+  FslistResult,
+  FsmodOptions,
+  FsmodResult,
+  GrantOptions,
+  GrantResult,
+  LoginOptions,
+  LogoutResult,
+  MoveResult,
+  NodeKind,
+  ReaddirResult,
+  ReadfileResult,
+  SNFS,
   SNFSError,
+  Session,
+  SessionDetail,
+  SessionInfo,
+  StatResult,
+  UnlinkResult,
+  UserInfo,
+  UseraddOptions,
+  UserdelResult,
+  UsermodOptions,
+  WritefileOptions,
+  WritefileResult,
 } from 'selfnetfs-common';
 import {
   FileSystemMemory,
   Memory,
+  SessionMemory,
 } from 'selfnetfs-memory';
+import {
+  PasswordModuleHash,
+} from './password';
+import cloneDeep = require('lodash.clonedeep');
 
-export class Persist {
-  _database_dir: string;
+// The base class for every persistance layer. A persistance layer is used by
+// the server to handle the requests from the client.
+export abstract class PersistBase {
+  abstract getSNFSForOwner(owner: string): SNFS;
+}
 
-  constructor(database_dir: string) {
-    this._database_dir = database_dir;
+// Persistance layer that doesn't persist.
+export class PersistMemory extends PersistBase {
+  private owners: Map<string, Memory>;
+  private nullOwner: Memory;
+
+  constructor() {
+    super();
+    this.owners = new Map<string, Memory>();
+    this.nullOwner = this._newSNFS();
   }
 
-  save(owner: string, snfs: Memory): void {
-    const content = stringify(snfs);
+  private _newSNFS(): Memory {
+    return new Memory(uuid.v4, new PasswordModuleHash());
+  }
+
+  // NOTE: Used by tests to set up an owner.
+  bootstrap(owner: string, name: string, password: string) {
+    const snfs = this._newSNFS();
+    snfs.bootstrap(name, password);
+    this.owners.set(owner, snfs);
+  }
+
+  getSNFSForOwner(owner: string): SNFS {
+    const snfs = this.owners.get(owner);
+    if (snfs != null) {
+      return snfs;
+    }
+    return this.nullOwner;
+  }
+}
+
+interface PersistMemoryDumpOptions {
+  dataDirectory: string;
+}
+
+// A persistance layer which is backed by the in-memory implementation and
+// dumps the data to a file.
+export class PersistMemoryDump extends PersistBase {
+  private options: PersistMemoryDumpOptions;
+  private owners: Map<string, PersistMemoryDumpSNFS>;
+  private nullOwner: PersistMemoryDumpSNFS;
+
+  constructor(options: PersistMemoryDumpOptions) {
+    super();
+    this.options = { ...options };
+    this.owners = new Map<string, PersistMemoryDumpSNFS>();
+    this.nullOwner = this._newSNFS('');
+  }
+
+  private _newSNFS(owner: string): PersistMemoryDumpSNFS {
+    return new PersistMemoryDumpSNFS(
+      this.options,
+      owner,
+      new Memory(uuid.v4, new PasswordModuleHash()),
+    );
+  }
+
+  // NOTE: Used by the cli to set up an owner.
+  bootstrap(owner: string, name: string, password: string) {
+    const snfs = this._newSNFS(owner);
+    snfs.snfs.bootstrap(name, password);
+    snfs.save();
+    this.owners.set(owner, snfs);
+  }
+
+  getSNFSForOwner(owner: string): SNFS {
+    const snfs = this.owners.get(owner);
+    if (snfs != null) {
+      return snfs;
+    }
+    const snfs2 = this._loadSNFSForOwner(owner);
+    if (snfs2 != null) {
+      return snfs2;
+    }
+    return this.nullOwner;
+  }
+
+  private _loadSNFSForOwner(owner: string): SNFS | null {
+    const snfs = this._newSNFS(owner);
+    if (snfs.load()) {
+      return snfs;
+    }
+    return null;
+  }
+}
+
+export class PersistMemoryDumpSNFS extends SNFS {
+  options: PersistMemoryDumpOptions;
+  owner: string;
+  snfs: Memory;
+  snfsCopy: Memory | null;
+
+  constructor(options: PersistMemoryDumpOptions, owner: string, snfs: Memory) {
+    super();
+
+    this.options = options;
+    this.owner = owner;
+    this.snfs = snfs;
+    this.snfsCopy = null;
+  }
+
+  save() {
+    const content = stringify(this.snfs);
     try {
-      fs.writeFileSync(path.join(this._database_dir, owner + '.json'), content);
+      fs.writeFileSync(path.join(this.options.dataDirectory, this.owner + '.json'), content);
     } catch (err) {
       if (err.code == 'ENOENT') {
-        console.log(`Could not persist database. Did you create the directory ${ this._database_dir }?`);
+        console.log(`Could not persist database. Did you create the directory ${ this.options.dataDirectory }?`);
       }
       throw err;
     }
   }
 
-  // load() might get called for non-existant owners very
-  // often, so it is designed not to throw and instead returns
-  // null if there is a problem (usually file not found).
-  load(owner: string, factory: () => Memory): Memory | null {
+  load(): boolean {
     try {
-      const content = fs.readFileSync(path.join(this._database_dir, owner + '.json'));
-      const snfs = factory();
-      parse(content.toString('utf-8'), snfs);
-      return snfs;
+      const content = fs.readFileSync(path.join(this.options.dataDirectory, this.owner + '.json'));
+      parse(content.toString('utf-8'), this.snfs);
+      return true;
     } catch (err) {
       // File not found errors are expected.
       if (err.code != 'ENOENT') {
         console.error(err);
       }
-      return null;
+      return false;
     }
   }
+
+  login(options: LoginOptions): Promise<Session> {
+    const session = this.snfs._login(options);
+    const result = new PersistMemoryDumpSession(this, session);
+    return Promise.resolve(result);
+  }
+
+  resume(session_token: string): Promise<Session> {
+    const session = this.snfs._resume(session_token);
+    const result = new PersistMemoryDumpSession(this, session);
+    return Promise.resolve(result);
+  }
+
+  doAndSave<T>(action: () => T): T {
+    const cloned = cloneDeep(this.snfs);
+    const result = action();
+    try {
+      this.save();
+    } catch (err) {
+      this.snfs = cloned;
+      throw err;
+    }
+    return result;
+  }
 }
+
+export class PersistMemoryDumpSession extends Session {
+  snfs: PersistMemoryDumpSNFS;
+  session: SessionMemory;
+
+  constructor(snfs: PersistMemoryDumpSNFS, session: SessionMemory) {
+    super();
+
+    this.snfs = snfs;
+    this.session = session;
+  }
+
+  info(): SessionInfo {
+    return this.session.info();
+  }
+
+  detail(): Promise<SessionDetail> {
+    return this.session.detail();
+  }
+
+  logout(): Promise<LogoutResult> {
+    return this.session.logout();
+  }
+
+  useradd(options: UseraddOptions): Promise<UserInfo> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._useradd(options);
+    }));
+  }
+
+  usermod(userno: string, options: UsermodOptions): Promise<UserInfo> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._usermod(userno, options);
+    }));
+  }
+
+  userdel(userno: string): Promise<UserdelResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._userdel(userno);
+    }));
+  }
+
+  userlist(): Promise<UserInfo[]> {
+    return this.session.userlist();
+  }
+
+  fs(): Promise<FileSystem> {
+    const fs = this.session._fs();
+    const result = new PersistMemoryDumpFileSystem(this.snfs, fs);
+    return Promise.resolve(result);
+  }
+
+  fsget(fsno: string, options?: FsgetOptions): Promise<FileSystem> {
+    const fs = this.session._fsget(fsno, options);
+    const result = new PersistMemoryDumpFileSystem(this.snfs, fs);
+    return Promise.resolve(result);
+  }
+
+  fsresume(fs_token: string): Promise<FileSystem> {
+    const fs = this.session._fsresume(fs_token);
+    const result = new PersistMemoryDumpFileSystem(this.snfs, fs);
+    return Promise.resolve(result);
+  }
+
+  fsadd(options: FsaddOptions): Promise<FsaddResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._fsadd(options);
+    }));
+  }
+
+  fsmod(fsno: string, options: FsmodOptions): Promise<FsmodResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._fsmod(fsno, options);
+    }));
+  }
+
+  fsdel(fsno: string): Promise<FsdelResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._fsdel(fsno);
+    }));
+  }
+
+  fslist(): Promise<FslistResult[]> {
+    return this.session.fslist();
+  }
+
+  grant(userno: string, options: GrantOptions | GrantOptions[]): Promise<GrantResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.session._grant(userno, options);
+    }));
+  }
+}
+
+export class PersistMemoryDumpFileSystem {
+  snfs: PersistMemoryDumpSNFS;
+  fs: FileSystemMemory;
+
+  constructor(snfs: PersistMemoryDumpSNFS, fs: FileSystemMemory) {
+    this.snfs = snfs;
+    this.fs = fs;
+  }
+
+  info(): FileSystemInfo {
+    return this.fs.info();
+  }
+
+  detail(): Promise<FileSystemDetail> {
+    return this.fs.detail();
+  }
+
+  readdir(path: string): Promise<ReaddirResult[]> {
+    return this.fs.readdir(path);
+  }
+
+  stat(path: string): Promise<StatResult> {
+    return this.fs.stat(path);
+  }
+
+  writefile(path: string, data: Uint8Array, options?: WritefileOptions): Promise<WritefileResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.fs._writefile(path, data, options);
+    }));
+  }
+
+  readfile(path: string): Promise<ReadfileResult> {
+    return this.fs.readfile(path);
+  }
+
+  unlink(path: string): Promise<UnlinkResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.fs._unlink(path);
+    }));
+  }
+
+  move(path: string, newpath: string): Promise<MoveResult> {
+    return Promise.resolve(this.snfs.doAndSave(() => {
+      return this.fs._move(path, newpath);
+    }));
+  }
+}
+
 
 // Extracts the content of an Memory instance so that the parse() function can
 // restore the data into an Memory instance at a later time.
@@ -165,6 +463,7 @@ interface UserRecordDump {
   fs: string | null; // fsno
   union: string[]; // fsno[]
 }
+
 function dumpUserRecord(user: UserRecord): UserRecordDump {
   return {
     userno: user.userno,
@@ -175,6 +474,7 @@ function dumpUserRecord(user: UserRecord): UserRecordDump {
     union: user.union.map(ufs => ufs._fsno),
   };
 }
+
 function loadUserRecord(user: any, snfs: Memory): UserRecord {
   function lookupFS(fsno: string): FileSystemMemory {
     const fs = snfs._fss.find(fs => fs._fsno == fsno);
@@ -192,5 +492,3 @@ function loadUserRecord(user: any, snfs: Memory): UserRecord {
     union: user.union.map(lookupFS),
   };
 }
-
-export default Persist;

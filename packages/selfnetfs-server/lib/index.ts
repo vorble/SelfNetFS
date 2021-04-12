@@ -9,32 +9,30 @@ import {
   Session,
   GrantOptions,
 } from 'selfnetfs-common';
-import { OwnerPool } from './owner';
-export { OwnerPool } from './owner';
 import {
   Memory,
 } from 'selfnetfs-memory';
 import { PasswordModuleHash } from './password';
 import { ServerSessionManager, ServerSession } from './session';
-
-export { Persist } from './persist'; // TODO: provisionally exported
+import { PersistBase } from './persist';
+export { PersistMemory, PersistMemoryDump } from './persist';
 
 interface ServerOptions<T extends SNFS> {
   port: number;
-  owners: OwnerPool<T>;
+  persist: PersistBase;
 }
 
 export class Server {
   private port: number;
   private sessions: ServerSessionManager;
-  private owners: OwnerPool<SNFS>;
+  private persist: PersistBase;
   private app: express.Application;
   private server: null | net.Server;
 
   constructor(options: ServerOptions<SNFS>) {
     this.port = options.port;
     this.sessions = new ServerSessionManager();
-    this.owners = options.owners;
+    this.persist = options.persist;
     this.app = express();
     this.server = null;
 
@@ -60,8 +58,8 @@ export class Server {
         if (typeof req.body !== 'object') {
           return res.status(400).send({ message: 'Invalid request: missing request body.' });
         }
+        // TODO: Don't need this finish callback anymore.
         res.locals.finish = (response: any) => {
-          this.owners.save(req.params.owner, res.locals.snfs);
           return res.status(200).send(response == null ? {} : response);
         };
       }
@@ -570,7 +568,7 @@ export class Server {
 
   lookupOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
     const { owner } = req.params;
-    res.locals.snfs = this.owners.lookup(owner);
+    res.locals.snfs = this.persist.getSNFSForOwner(owner);
     next();
   }
 
