@@ -1,7 +1,7 @@
 {
-  "name": "selfnetfs-web-shell",
+  "name": "selfnetfs-shell-web",
   "version": "1.0.2",
-  "description": "selfnetfs-web-shell",
+  "description": "selfnetfs-shell-web",
   "files": [
     "dist"
   ],
@@ -9,13 +9,13 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "start": "ts-node --project tsconfig.server.json server/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": ""
   },
   "author": "Keith <vorble@cochleoid.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/vorble/selfnetfs",
-    "directory": "packages/selfnetfs-web-shell"
+    "directory": "packages/selfnetfs-shell-web"
   },
   "license": "MIT",
   "dependencies": {
