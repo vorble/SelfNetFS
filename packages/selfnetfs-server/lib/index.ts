@@ -22,6 +22,7 @@ interface ServerOptions<T extends SNFS> {
   port: number;
   persist: PersistBase;
   logger: Logger;
+  secure?: boolean;
 }
 
 export class Server {
@@ -30,6 +31,7 @@ export class Server {
   private persist: PersistBase;
   private logger: Logger;
   private app: express.Application;
+  private secure: boolean;
   private server: null | net.Server;
 
   constructor(options: ServerOptions<SNFS>) {
@@ -38,6 +40,7 @@ export class Server {
     this.persist = options.persist;
     this.logger = options.logger;
     this.app = express();
+    this.secure = options.secure == null ? true : options.secure;
     this.server = null;
 
     this.app.use(cookieParser());
@@ -85,7 +88,7 @@ export class Server {
           password: password as string
         });
         const session = this.sessions.create(ses);
-        res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'none', secure: true, expires: session.expires });
+        res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'none', secure: this.secure, expires: session.expires });
         res.locals.finish({ pool: session.pool, userno: ses.info().userno });
       } catch (err) {
         next(err);
@@ -97,7 +100,7 @@ export class Server {
       try {
         const session: ServerSession = res.locals.session;
         session.updateExpires();
-        res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'none', secure: true, expires: session.expires });
+        res.cookie(session.pool, session.token, { path: '/' + req.params.owner + '/' + session.pool, sameSite: 'none', secure: this.secure, expires: session.expires });
         res.locals.finish({
           userno: session.session.info().userno,
         });
@@ -119,7 +122,8 @@ export class Server {
     this.app.options('/:owner/:pool/logout', (req, res) => { res.end(); });
     this.app.post('/:owner/:pool/logout', this.lookupOwner.bind(this), async (req, res, next) => {
       try {
-        res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'none', secure: true, maxAge: 0 });
+        res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'none', secure: this.secure, maxAge: 0 });
+        res.clearCookie(req.params.pool, { path: '/' + req.params.owner + '/' + req.params.pool, sameSite: 'none', maxAge: 0 });
         res.locals.finish({});
       } catch (err) {
         next(err);
