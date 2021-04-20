@@ -37,6 +37,12 @@ import {
   bufferToBase64,
 } from './buffer';
 
+import * as tough from 'tough-cookie';
+import axiosCookieJarSupport from 'axios-cookiejar-support';
+
+axiosCookieJarSupport(axios);
+const cookieJar = new tough.CookieJar();
+
 function urljoin(...parts: string[]): string {
   return parts.map(p => p.replace(/^\//, '').replace(/\/$/, '')).join('/');
 }
@@ -61,6 +67,7 @@ async function apirequest(endpoint: string, payload: any) {
     const response = await axios({
       url: endpoint,
       method: 'POST',
+      jar: cookieJar,
       data: JSON.stringify(payload),
       headers: {
         'Accept': 'application/json',
@@ -80,6 +87,8 @@ async function apirequest(endpoint: string, payload: any) {
     throw err;
   }
 }
+
+
 
 export class Http extends SNFS {
   _owner_url: string;
