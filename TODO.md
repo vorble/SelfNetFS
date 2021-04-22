@@ -17,7 +17,7 @@
 * [ ] Deep review each npmignore file for consistency.
 * [ ] Figure out how lerna manages propagating package version numbers through the project. Does it even?
 * [x] Write basic test that starts a server and runs some requests against it.
-* [ ] Write test infrastructure that can perform a full set of tests on any given SNFS implementation.
+* [x] Write test infrastructure that can perform a full set of tests on any given SNFS implementation.
 * [ ] Revise dependencies in server, correctly put things in the dev and non-dev dependencies sections.
 * [ ] Revise naming all through the project.
 * [ ] Add appropriate typescript dependencies per package in project.
