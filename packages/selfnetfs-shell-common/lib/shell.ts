@@ -1,19 +1,28 @@
 import * as shlex from 'shlex';
 import { Command } from './command';
+import { Http } from 'selfnetfs';
+import { SNFS } from 'selfnetfs-common';
 
 interface ShellAdaptor {
   log: (text: string) => void;
+  promptText: (prompt: string) => Promise<string | null>;
+  promptPassword: () => Promise<string | null>
 }
 
 export class ShellUnterminatedCommandError extends Error {}
 
 export class Shell {
-  adaptor: ShellAdaptor;
-  commands: Map<string, Command>;
+  private adaptor: ShellAdaptor;
+  private commands: Map<string, Command>;
+  private owners: Map<string, SNFS>;
+  private currentOwner: SNFS | null;
 
   constructor(adaptor: ShellAdaptor) {
     this.adaptor = adaptor;
     this.commands = new Map<string, Command>();
+    this.commands.set('connect', { exec: this.cmdConnect.bind(this) });
+    this.owners = new Map<string, SNFS>();
+    this.currentOwner = null;
   }
 
   getPromptText(): string {
@@ -24,10 +33,10 @@ export class Shell {
     this.adaptor.log(text);
   }
 
-  run(command: string) {
+  async run(command: string) {
     try {
       const args = shlex.split(command);
-      this.exec(args);
+      await this.exec(args);
     } catch (err) {
       if (err.message == 'Got EOF while in a quoted string') {
         throw new ShellUnterminatedCommandError();
@@ -39,7 +48,7 @@ export class Shell {
     }
   }
 
-  exec(args: Array<string>) {
+  async exec(args: Array<string>) {
     if (args.length == 0) {
       return;
     }
@@ -50,6 +59,19 @@ export class Shell {
       return;
     }
 
-    cmd.exec(args);
+    await cmd.exec(args);
+  }
+
+  async cmdConnect(args: Array<string>): Promise<void> {
+    const api = new Http('http://127.0.0.1:4000');
+    const username = await this.adaptor.promptText('Username: ');
+    if (username == null) {
+      return;
+    }
+    const password = await this.adaptor.promptPassword();
+    if (password == null) {
+      return;
+    }
+    const ses = await api.login({ name: username, password: password });
   }
 }

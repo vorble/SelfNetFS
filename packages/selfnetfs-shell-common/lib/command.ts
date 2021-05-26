@@ -1,3 +1,3 @@
 export interface Command {
-  exec: (args: Array<string>) => void;
+  exec: (args: Array<string>) => Promise<void>;
 }

@@ -6,6 +6,14 @@ const adaptor = {
   log: (text: string) => {
     console.log(text);
   },
+  promptText: async (prompt: string) => {
+    // TODO
+    return null;
+  },
+  promptPassword: async () => {
+    // TODO: how do you prompt for a password? Shouldn't keep it in history.
+    return null;
+  },
   write: (text: string) => { // TODO: Do I need this?
     process.stdout.write(text);
   },
@@ -28,14 +36,14 @@ rl.prompt();
 
 let lineParts: Array<string> = [];
 
-rl.on('line', (line: string) => {
+rl.on('line', async (line: string) => {
   try {
     if (lineParts.length > 0) {
       const newLine = lineParts.join('\n') + '\n' + line;
-      shell.run(newLine);
+      await shell.run(newLine);
       lineParts.length = 0;
     } else {
-      shell.run(line);
+      await shell.run(line);
     }
 
     rl.setPrompt(shell.getPromptText());
@@ -49,6 +57,10 @@ rl.on('line', (line: string) => {
       adaptor.error(err);
     }
   }
+});
+
+rl.on('close', function() {
+  adaptor.log('^D');
 });
 
 rl.on('SIGINT', function() {

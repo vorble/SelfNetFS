@@ -9,6 +9,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "start": "ts-node lib/index.ts",
     "test": ""
   },
   "author": "Keith <vorble@cochleoid.com>",
